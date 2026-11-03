@@ -5,30 +5,60 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.kirthi.oracle"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0B12",
+        "backgroundColor": "#E9E3FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.kirthi.oracle"
+      "package": "com.kirthi.oracle",
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "oracle",
+    "scheme": [
+      "oracle"
+    ],
     "plugins": [
       "expo-router",
-      "expo-secure-store"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#7C6CF2"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The Oracle uses your photos to log meals and share images with your coaches.",
+          "cameraPermission": "The Oracle uses the camera to log your meals."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FBF7F2",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160
+        }
+      ]
+    ]
   }
 }

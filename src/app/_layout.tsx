@@ -1,21 +1,99 @@
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/theme';
+import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import {
+  useFonts,
+  Fraunces_400Regular_Italic,
+  Fraunces_600SemiBold,
+} from '@expo-google-fonts/fraunces';
+import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
+import { colors, fonts } from '@/theme';
+import { db } from '@/lib/db';
+import { setupNotifications } from '@/lib/nags';
+import { setCommitmentStatus, snoozeCommitment, sweepMissed } from '@/lib/commitments';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const handled = new Set<string>();
+
+async function handleResponse(r: Notifications.NotificationResponse) {
+  // The same tap can arrive through both the listener and the launch response.
+  const key = `${r.notification.request.identifier}:${r.actionIdentifier}:${r.notification.date}`;
+  if (handled.has(key)) return;
+  handled.add(key);
+  const data = r.notification.request.content.data as { commitmentId?: number; url?: string };
+  if (data.commitmentId && r.actionIdentifier === 'done') {
+    await setCommitmentStatus(data.commitmentId, 'done');
+    return;
+  }
+  if (data.commitmentId && r.actionIdentifier === 'snooze') {
+    await snoozeCommitment(data.commitmentId, 30);
+    return;
+  }
+  if (r.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER && data.url) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    router.push(data.url as any);
+  }
+}
 
 export default function RootLayout() {
+  const [loaded] = useFonts({
+    Fraunces_400Regular_Italic,
+    Fraunces_600SemiBold,
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
+  // Platform never changes at runtime, so this conditional hook call is stable.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const lastResponse = Platform.OS === 'web' ? null : Notifications.useLastNotificationResponse();
+
+  useEffect(() => {
+    db()
+      .then(() => sweepMissed())
+      .catch(() => {});
+    setupNotifications().catch(() => {});
+    if (Platform.OS === 'web') return;
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      handleResponse(r).catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    if (lastResponse && loaded) handleResponse(lastResponse).catch(() => {});
+  }, [lastResponse, loaded]);
+
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync().catch(() => {});
+  }, [loaded]);
+
+  if (!loaded) return null;
+
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
+          headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,
-          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: fonts.display, fontSize: 20 },
           contentStyle: { backgroundColor: colors.bg },
+          headerBackButtonDisplayMode: 'minimal',
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'The Oracle' }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="chat/[coach]" options={{ title: '' }} />
+        <Stack.Screen name="studio/food" options={{ title: 'Food log' }} />
+        <Stack.Screen name="studio/money" options={{ title: 'Money' }} />
+        <Stack.Screen name="studio/notes" options={{ title: 'Study notes' }} />
+        <Stack.Screen name="notes/[id]" options={{ title: '' }} />
+        <Stack.Screen name="memory" options={{ title: 'Shared memory' }} />
       </Stack>
     </>
   );
