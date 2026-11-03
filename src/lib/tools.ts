@@ -141,13 +141,13 @@ export async function runTool(
         const cm = await createCommitment(c.id, s('title'), due);
         return {
           result: { ok: true, id: cm.id },
-          note: `⏰ Locked in: ${cm.title}, ${new Date(due).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`,
+          note: `Locked in: ${cm.title}, ${new Date(due).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`,
         };
       }
       case 'complete_commitment': {
         const status = s('status') === 'dropped' ? 'dropped' : 'done';
         await setCommitmentStatus(Number(args.id), status);
-        return { result: { ok: true }, note: status === 'done' ? '✓ Marked done' : 'Dropped' };
+        return { result: { ok: true }, note: status === 'done' ? 'Marked done' : 'Dropped' };
       }
       case 'list_commitments': {
         const list = await openCommitments();
@@ -157,11 +157,11 @@ export async function runTool(
       }
       case 'remember_fact': {
         await addFact(s('fact'), c.id);
-        return { result: { ok: true }, note: '🧠 Saved to memory' };
+        return { result: { ok: true }, note: 'Saved to memory' };
       }
       case 'add_todo': {
         const t = await addTodo(s('title'), args.due_iso ? s('due_iso') : undefined);
-        return { result: { ok: true, id: t.id }, note: `📝 Added to To Do: ${t.title}` };
+        return { result: { ok: true, id: t.id }, note: `Added to To Do: ${t.title}` };
       }
       case 'list_todos': {
         const items = await listTodos();
@@ -169,7 +169,7 @@ export async function runTool(
       }
       case 'add_calendar_event': {
         const e = await addEvent(s('title'), s('start_iso'), s('end_iso'), args.description ? s('description') : undefined);
-        return { result: { ok: true, id: e.id }, note: `📅 Added to calendar: ${s('title')}` };
+        return { result: { ok: true, id: e.id }, note: `Added to calendar: ${s('title')}` };
       }
       case 'list_calendar_events': {
         const events = await listEvents(n('days') ?? 1);
@@ -179,7 +179,7 @@ export async function runTool(
       }
       case 'notion_journal': {
         const url = await addJournalEntry(s('title'), s('markdown'));
-        return { result: { ok: true, url }, note: '📓 Written to Notion' };
+        return { result: { ok: true, url }, note: 'Written to Notion' };
       }
       case 'log_food': {
         await (await db()).runAsync(
@@ -193,13 +193,13 @@ export async function runTool(
           args.note ? s('note') : null,
           Date.now(),
         );
-        return { result: { ok: true }, note: `🍽 Logged: ${s('description')}` };
+        return { result: { ok: true }, note: `Logged: ${s('description')}` };
       }
       case 'find_clips': {
         const added = await searchClips(s('query'), c.id);
         return {
           result: { ok: true, added },
-          note: added ? `🎬 Added ${added} clips to your Goal Feed` : undefined,
+          note: added ? `Added ${added} clips to your Goal Feed` : undefined,
         };
       }
     }

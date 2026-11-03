@@ -107,7 +107,7 @@ export default function Feed() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
             <Pill label="All" active={filter === 'all'} onPress={() => (setFilter('all'), load('all'))} />
             {COACHES.map((c) => (
-              <Pill key={c.id} label={`${c.emoji} ${c.name}`} active={filter === c.id} tint={c.tint} onPress={() => (setFilter(c.id), load(c.id))} />
+              <Pill key={c.id} label={c.name} active={filter === c.id} tint={c.tint} onPress={() => (setFilter(c.id), load(c.id))} />
             ))}
           </ScrollView>
           {msg && <Text style={[type.small, { paddingHorizontal: space.lg, paddingBottom: space.sm }]}>{msg}</Text>}
@@ -118,11 +118,11 @@ export default function Feed() {
         {items.length === 0 ? (
           <View style={{ padding: space.lg, gap: space.md }}>
             <Empty
-              emoji="🎞"
+              icon="film-outline"
               title="Your feed is empty"
               body="Tap refresh to pull Shorts for each coach, or + to save a TikTok, Reel, Short or Pinterest link."
             />
-            <Button title="Fetch clips" icon="✨" onPress={refresh} loading={refreshing} />
+            <Button title="Fetch clips" icon="sparkles" onPress={refresh} loading={refreshing} />
           </View>
         ) : height > 0 ? (
           <FlatList
@@ -139,7 +139,7 @@ export default function Feed() {
             ListFooterComponent={
               capped ? (
                 <View style={[styles.stop, { height }]}>
-                  <Text style={{ fontSize: 44 }}>🏁</Text>
+                  <Ionicons name="flag" size={40} color={colors.accent} />
                   <Text style={[type.title, { textAlign: 'center' }]}>That's {SESSION_CAP}. Now go live it.</Text>
                   {next ? (
                     <>
@@ -147,7 +147,7 @@ export default function Feed() {
                       <Button title="Do it now" onPress={() => router.push(`/chat/${next.coach}?prompt=${encodeURIComponent(`I'm starting "${next.title}" now. Keep me on it.`)}`)} />
                     </>
                   ) : (
-                    <Button title="Plan something with The Oracle" onPress={() => router.push('/chat/hq')} />
+                    <Button title="Plan something with Planner" onPress={() => router.push('/chat/hq')} />
                   )}
                   <Button title="Back to Today" variant="ghost" onPress={() => router.push('/')} />
                 </View>
@@ -184,7 +184,7 @@ function Clip({ item, height, playing, onChanged }: { item: FeedItem; height: nu
           <Image source={{ uri: item.thumb }} style={{ flex: 1 }} resizeMode={item.source === 'pinterest' ? 'cover' : 'cover'} />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={{ fontSize: 42 }}>{k.emoji}</Text>
+            <Ionicons name={k.icon} size={40} color={k.deep} />
             <Text style={type.bodySoft}>{item.source === 'link' ? 'Saved link' : `Saved ${item.source}`}</Text>
           </View>
         )}
@@ -192,7 +192,7 @@ function Clip({ item, height, playing, onChanged }: { item: FeedItem; height: nu
       <View style={styles.meta}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[type.small, { color: k.deep }]}>
-            {k.emoji} {k.name} · {item.source}
+            {k.name} · {item.source}
           </Text>
           <Text style={type.heading} numberOfLines={2}>
             {item.title ?? item.url}
@@ -258,7 +258,7 @@ function AddLink({ visible, onClose, onSaved }: { visible: boolean; onClose: () 
         <Text style={type.label}>For which coach? (optional)</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
           {COACHES.map((c) => (
-            <Pill key={c.id} label={`${c.emoji} ${c.name}`} active={tag === c.id} tint={c.tint} onPress={() => setTag(tag === c.id ? null : c.id)} />
+            <Pill key={c.id} label={c.name} active={tag === c.id} tint={c.tint} onPress={() => setTag(tag === c.id ? null : c.id)} />
           ))}
         </ScrollView>
         {err && <Text style={[type.small, { color: colors.danger }]}>{err}</Text>}

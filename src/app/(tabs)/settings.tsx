@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Field, PageHeader, Screen, Section } from '@/components/ui';
 import { shareBackup } from '@/lib/backup';
 import { kvGet, kvSet } from '@/lib/db';
@@ -50,7 +51,7 @@ function SecretField({
 
   return (
     <Field
-      label={`${label}${has ? '  ✓' : ''}`}
+      label={`${label}${has ? ' · saved' : ''}`}
       value={value}
       onChangeText={setValue}
       onEndEditing={save}
@@ -119,7 +120,7 @@ export default function Settings() {
     setGemini(null);
     try {
       const t = await generateText('Say hello to kirthi in one short, warm sentence.');
-      setGemini(`✓ ${t}`);
+      setGemini(`Working. ${t}`);
     } catch (e) {
       setGemini(e instanceof Error ? e.message : String(e));
     } finally {
@@ -134,7 +135,7 @@ export default function Settings() {
       return;
     }
     if (!(await ensurePermission())) {
-      Alert.alert('Notifications are off', 'Allow notifications for The Oracle in Android settings.');
+      Alert.alert('Notifications are off', 'Allow notifications for Kairos in Android settings.');
       return;
     }
     await scheduleDaily(times);
@@ -144,7 +145,10 @@ export default function Settings() {
   return (
     <Screen header={<PageHeader eyebrow="Settings" title="You" />}>
       <Card tint={palette.lavender} onPress={() => router.push('/memory')}>
-        <Text style={type.heading}>🧠 Profile and shared memory</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <Ionicons name="person-circle-outline" size={20} color={colors.accent} />
+          <Text style={type.heading}>Profile and shared memory</Text>
+        </View>
         <Text style={type.bodySoft}>What every coach knows about you. Edit or forget anything.</Text>
       </Card>
 
@@ -178,7 +182,7 @@ export default function Settings() {
           <Button title="Send a test nag (5 s)" variant="soft" onPress={() => ensurePermission().then(testNotification)} />
           <Button title="Allow exact alarms" variant="ghost" onPress={openAlarmSettings} />
           <Text style={type.small}>
-            On Samsung: Settings → Battery → Background usage limits → Never sleeping apps → add The Oracle. Otherwise nags can arrive late.
+            On Samsung: Settings → Battery → Background usage limits → Never sleeping apps → add Kairos. Otherwise nags can arrive late.
           </Text>
         </Card>
       </Section>
@@ -223,7 +227,7 @@ export default function Settings() {
             variant="soft"
             onPress={() =>
               testNotion()
-                .then((w) => setNotionMsg(`✓ Connected to ${w}`))
+                .then((w) => setNotionMsg(`Connected to ${w}`))
                 .catch((e: Error) => setNotionMsg(e.message))
             }
           />
@@ -243,7 +247,7 @@ export default function Settings() {
             placeholder={'username/vision-board\nusername/fitness-inspo'}
             multiline
             autoCapitalize="none"
-            hint="One public board per line. Pins show up in the feed and on Manifest's shelf."
+            hint="One public board per line. Pins show up in the feed under Manifestation."
           />
         </Card>
       </Section>
@@ -251,13 +255,13 @@ export default function Settings() {
       <Section title="Backup">
         <Card>
           <Text style={type.bodySoft}>Everything lives on this phone. Export a copy now and then and save it to Google Drive.</Text>
-          <Button title="Export backup" variant="soft" icon="💾" onPress={() => shareBackup().then(() => setLastBackup(new Date().toLocaleString()))} />
+          <Button title="Export backup" variant="soft" icon="cloud-download-outline" onPress={() => shareBackup().then(() => setLastBackup(new Date().toLocaleString()))} />
           <Text style={type.small}>{lastBackup ? `Last backup: ${lastBackup}` : 'No backup yet.'}</Text>
         </Card>
       </Section>
 
       <Text style={[type.small, { textAlign: 'center', color: colors.textMuted }]} onPress={() => Linking.openURL('https://aistudio.google.com/apikey')}>
-        The Oracle · made for kirthi
+        Kairos · made for kirthi
       </Text>
     </Screen>
   );

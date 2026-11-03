@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import type { IconName } from '@/data/coaches';
 import { colors, fonts, gradients, radius, shadow, space, type } from '@/theme';
 
 export function Screen({
@@ -99,7 +101,7 @@ export function Button({
   variant?: 'primary' | 'soft' | 'ghost' | 'danger';
   loading?: boolean;
   disabled?: boolean;
-  icon?: string;
+  icon?: IconName;
   style?: StyleProp<ViewStyle>;
 }) {
   const v = buttonVariants[variant];
@@ -120,10 +122,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={v.fg} />
       ) : (
-        <Text style={[styles.buttonText, { color: v.fg }]}>
-          {icon ? `${icon}  ` : ''}
-          {title}
-        </Text>
+        <View style={styles.buttonInner}>
+          {icon ? <Ionicons name={icon} size={18} color={v.fg} /> : null}
+          <Text style={[styles.buttonText, { color: v.fg }]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -188,27 +190,29 @@ export function Section({ title, action, children }: { title: string; action?: R
   );
 }
 
-export function Blob({ emoji, tint, size = 48 }: { emoji: string; tint: string; size?: number }) {
+export function Blob({ icon, tint, color, size = 48 }: { icon: IconName; tint: string; color: string; size?: number }) {
   return (
     <View
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2.4,
+        borderRadius: size / 2.6,
         backgroundColor: tint,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Text style={{ fontSize: size * 0.48 }}>{emoji}</Text>
+      <Ionicons name={icon} size={size * 0.46} color={color} />
     </View>
   );
 }
 
-export function Empty({ emoji, title, body }: { emoji: string; title: string; body?: string }) {
+export function Empty({ icon, title, body }: { icon: IconName; title: string; body?: string }) {
   return (
     <View style={styles.empty}>
-      <Text style={{ fontSize: 36 }}>{emoji}</Text>
+      <View style={styles.emptyIcon}>
+        <Ionicons name={icon} size={26} color={colors.accent} />
+      </View>
       <Text style={[type.heading, { textAlign: 'center' }]}>{title}</Text>
       {body ? <Text style={[type.bodySoft, { textAlign: 'center' }]}>{body}</Text> : null}
     </View>
@@ -250,6 +254,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: { fontFamily: fonts.bodyHeavy, fontSize: 16 },
+  buttonInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -268,6 +273,15 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   empty: { alignItems: 'center', gap: space.sm, padding: space.xl },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 22,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: space.xs,
+  },
   stat: { flex: 1, borderRadius: radius.md, padding: space.md, gap: 2 },
   statValue: { fontFamily: fonts.display, fontSize: 22, color: colors.text },
 });

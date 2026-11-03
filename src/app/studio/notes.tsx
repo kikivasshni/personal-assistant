@@ -65,7 +65,7 @@ export default function NotesScreen() {
       <Card tint={palette.sky}>
         <Text style={type.title}>Make notes</Text>
         <Text style={type.bodySoft}>Add lecture slides, PDFs or photos of the whiteboard. You'll get clean notes, key terms, likely exam questions and flashcards.</Text>
-        <Button title={files.length ? 'Add more files' : 'Choose files'} icon="📎" variant={files.length ? 'soft' : 'primary'} onPress={pick} />
+        <Button title={files.length ? 'Add more files' : 'Choose files'} icon="attach" variant={files.length ? 'soft' : 'primary'} onPress={pick} />
         {files.map((f, i) => (
           <Text key={i} style={type.small}>
             • {f.name}
@@ -81,7 +81,7 @@ export default function NotesScreen() {
                 <Switch value={toNotion} onValueChange={setToNotion} trackColor={{ true: colors.accent }} />
               </View>
             )}
-            <Button title="Make my notes" icon="✨" onPress={generate} loading={busy} />
+            <Button title="Make my notes" icon="sparkles" onPress={generate} loading={busy} />
             {busy && <Text style={type.small}>Reading everything carefully. Up to a minute for long decks.</Text>}
           </>
         )}
@@ -91,7 +91,7 @@ export default function NotesScreen() {
       <Section title="Your notes">
         {notes.length === 0 ? (
           <Card>
-            <Empty emoji="📒" title="No notes yet" body="Study's quizzes get sharper as your notes grow." />
+            <Empty icon="book-outline" title="No notes yet" body="Quizzes get sharper as your notes grow." />
           </Card>
         ) : (
           notes.map((n) => (

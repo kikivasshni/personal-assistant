@@ -35,7 +35,7 @@ export async function setupNotifications() {
     });
   }
   await Notifications.setNotificationCategoryAsync(NAG_CATEGORY, [
-    { identifier: 'done', buttonTitle: 'Done ✓', options: { opensAppToForeground: false } },
+    { identifier: 'done', buttonTitle: 'Done', options: { opensAppToForeground: false } },
     { identifier: 'snooze', buttonTitle: 'Snooze 30 min', options: { opensAppToForeground: false } },
   ]);
 }
@@ -57,7 +57,7 @@ export async function scheduleChain(
   coachName: string,
 ): Promise<string[]> {
   const ids: string[] = [];
-  const headers = [coachName, `${coachName} · still waiting`, 'Drive · no more excuses'];
+  const headers = [coachName, `${coachName} · still waiting`, 'Motivation · no more excuses'];
   for (let i = 0; i < ESCALATION_MINUTES.length; i++) {
     const at = dueAt + ESCALATION_MINUTES[i] * 60_000;
     if (at <= Date.now() + 5_000) continue;
@@ -103,7 +103,7 @@ export async function scheduleDaily(times?: DailyTimes) {
   await Notifications.scheduleNotificationAsync({
     identifier: 'daily-briefing',
     content: {
-      title: 'Good morning ☀️',
+      title: 'Good morning',
       body: 'Your briefing is ready. Tap to see the day.',
       data: { url: '/?briefing=1' },
     },
@@ -112,7 +112,7 @@ export async function scheduleDaily(times?: DailyTimes) {
   await Notifications.scheduleNotificationAsync({
     identifier: 'daily-audit',
     content: {
-      title: 'Evening audit 🌙',
+      title: 'Evening audit',
       body: 'Two minutes: what got done, what slipped, what moves to tomorrow?',
       data: { url: '/chat/hq?audit=1' },
     },
@@ -122,7 +122,7 @@ export async function scheduleDaily(times?: DailyTimes) {
 
 export async function testNotification() {
   await Notifications.scheduleNotificationAsync({
-    content: { title: 'The Oracle', body: 'Notifications are working 🔮', categoryIdentifier: NAG_CATEGORY },
+    content: { title: 'Kairos', body: 'Notifications are working.', categoryIdentifier: NAG_CATEGORY },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5, channelId: 'nags' },
   });
 }

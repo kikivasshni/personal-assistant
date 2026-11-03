@@ -9,9 +9,9 @@ export async function shareBackup(): Promise<void> {
   const file = new File(Paths.document, `oracle-backup-${dayKey()}.json`);
   if (file.exists) file.delete();
   file.create();
-  file.write(JSON.stringify({ app: 'the-oracle', version: 1, exported_at: new Date().toISOString(), data }));
+  file.write(JSON.stringify({ app: 'kairos', version: 1, exported_at: new Date().toISOString(), data }));
   await kvSet('last_backup_at', String(Date.now()));
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Save your Oracle backup' });
+    await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Save your Kairos backup' });
   }
 }

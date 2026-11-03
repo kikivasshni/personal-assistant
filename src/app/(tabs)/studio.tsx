@@ -4,10 +4,10 @@ import { Blob, Card, PageHeader, Screen } from '@/components/ui';
 import { palette, space, type } from '@/theme';
 
 const TOOLS = [
-  { href: '/studio/food', emoji: '🍓', title: 'Food log', body: 'Snap a meal. Get macros and a PCOS-friendly tip.', tint: palette.rose },
-  { href: '/studio/money', emoji: '🌿', title: 'Money', body: 'Drop in your DBS statement. See where it went.', tint: palette.sage },
-  { href: '/studio/notes', emoji: '📚', title: 'Study notes', body: 'Turn lecture slides into notes, flashcards and quizzes.', tint: palette.sky },
-  { href: '/memory', emoji: '🧠', title: 'Shared memory', body: 'Everything your coaches remember about you.', tint: palette.lavender },
+  { href: '/studio/food', icon: 'nutrition-outline', deep: palette.roseDeep, title: 'Food log', body: 'Snap a meal. Get macros and a PCOS-friendly tip.', tint: palette.rose },
+  { href: '/studio/money', icon: 'wallet-outline', deep: palette.sageDeep, title: 'Money', body: 'Drop in your DBS statement. See where it went.', tint: palette.sage },
+  { href: '/studio/notes', icon: 'book-outline', deep: palette.skyDeep, title: 'Study notes', body: 'Turn lecture slides into notes, flashcards and quizzes.', tint: palette.sky },
+  { href: '/memory', icon: 'bookmarks-outline', deep: palette.lavenderDeep, title: 'Shared memory', body: 'Everything your coaches remember about you.', tint: palette.lavender },
 ] as const;
 
 export default function Studio() {
@@ -16,7 +16,7 @@ export default function Studio() {
       {TOOLS.map((t) => (
         <Card key={t.href} tint={t.tint} onPress={() => router.push(t.href)}>
           <View style={styles.row}>
-            <Blob emoji={t.emoji} tint="#FFFFFFAA" size={52} />
+            <Blob icon={t.icon} tint="#FFFFFFB3" color={t.deep} size={52} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={type.title}>{t.title}</Text>
               <Text style={type.bodySoft}>{t.body}</Text>

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Empty, Screen, Section, Stat } from '@/components/ui';
 import { Food } from '@/lib/db';
 import { analyseMeal, deleteMeal, MealEstimate, mealsToday, recentMeals, saveMeal, totals } from '@/lib/food';
@@ -82,14 +83,14 @@ export default function FoodScreen() {
               placeholder="Anything to add? e.g. half portion of rice"
               placeholderTextColor={colors.textMuted}
             />
-            {!estimate && <Button title="Estimate macros" icon="✨" onPress={analyse} loading={busy} />}
+            {!estimate && <Button title="Estimate macros" icon="sparkles" onPress={analyse} loading={busy} />}
           </>
         ) : (
           <>
             <Text style={type.title}>What are you eating?</Text>
-            <Text style={type.bodySoft}>Snap it and Body estimates calories, protein, carbs and how it sits with your insulin.</Text>
+            <Text style={type.bodySoft}>Snap it to estimate calories, protein, carbs and how it sits with your insulin.</Text>
             <View style={{ flexDirection: 'row', gap: space.sm }}>
-              <Button title="Camera" icon="📷" onPress={() => pick(true)} style={{ flex: 1 }} />
+              <Button title="Camera" icon="camera-outline" onPress={() => pick(true)} style={{ flex: 1 }} />
               <Button title="Gallery" variant="soft" onPress={() => pick(false)} style={{ flex: 1 }} />
             </View>
           </>
@@ -118,16 +119,16 @@ export default function FoodScreen() {
       </Card>
 
       <Button
-        title="Ask Body about today"
+        title="Ask the Health coach"
         variant="soft"
-        icon="🍓"
+        icon="heart-outline"
         onPress={() => router.push(`/chat/health?prompt=${encodeURIComponent('Rate what I ate today for my PCOS goals and tell me what to eat next.')}`)}
       />
 
       <Section title="Recent meals">
         {history.length === 0 ? (
           <Card>
-            <Empty emoji="🥗" title="No meals yet" body="Your first photo starts the log." />
+            <Empty icon="nutrition-outline" title="No meals yet" body="Your first photo starts the log." />
           </Card>
         ) : (
           history.map((m) => (
@@ -141,7 +142,7 @@ export default function FoodScreen() {
               }
             >
               <Card style={styles.meal}>
-                {m.photo_uri ? <Image source={{ uri: m.photo_uri }} style={styles.thumb} /> : <Text style={{ fontSize: 28 }}>🍽</Text>}
+                {m.photo_uri ? <Image source={{ uri: m.photo_uri }} style={styles.thumb} /> : <View style={styles.thumbEmpty}><Ionicons name="restaurant-outline" size={22} color={palette.roseDeep} /></View>}
                 <View style={{ flex: 1 }}>
                   <Text style={type.heading}>{m.description}</Text>
                   <Text style={type.small}>
@@ -174,4 +175,5 @@ const styles = StyleSheet.create({
   glText: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: colors.text, textTransform: 'capitalize' },
   meal: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
   thumb: { width: 52, height: 52, borderRadius: 14 },
+  thumbEmpty: { width: 52, height: 52, borderRadius: 14, backgroundColor: palette.rose, alignItems: 'center', justifyContent: 'center' },
 });

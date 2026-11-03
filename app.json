@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "The Oracle",
+    "name": "Kairos",
     "slug": "the-oracle",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -47,8 +47,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The Oracle uses your photos to log meals and share images with your coaches.",
-          "cameraPermission": "The Oracle uses the camera to log your meals."
+          "photosPermission": "Kairos uses your photos to log meals and share images with your coaches.",
+          "cameraPermission": "Kairos uses the camera to log your meals."
         }
       ],
       [

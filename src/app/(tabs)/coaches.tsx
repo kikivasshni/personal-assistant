@@ -26,14 +26,14 @@ export default function Coaches() {
     <Screen header={<PageHeader eyebrow="Your circle" title="Coaches" />}>
       <Card tint={hq.tint} onPress={() => router.push(`/chat/${hq.id}`)}>
         <View style={styles.row}>
-          <Blob emoji={hq.emoji} tint="#FFFFFFAA" size={56} />
+          <Blob icon={hq.icon} tint="#FFFFFFB3" color={hq.deep} size={56} />
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={type.title}>{hq.name}</Text>
-            <Text style={type.small}>{hq.role} · sees everything</Text>
+            <Text style={type.small}>{hq.role}</Text>
           </View>
         </View>
         <Text style={type.bodySoft} numberOfLines={2}>
-          {last[hq.id]?.text ?? 'Plan your day, check what slipped, or just tell it what is going on.'}
+          {last[hq.id]?.text ?? 'Plan your day, check what slipped, or talk through what is going on.'}
         </Text>
       </Card>
 
@@ -41,7 +41,7 @@ export default function Coaches() {
         {rest.map((c) => (
           <View key={c.id} style={styles.cell}>
             <Card tint={c.tint} onPress={() => router.push(`/chat/${c.id}`)} style={styles.coachCard}>
-              <Blob emoji={c.emoji} tint="#FFFFFFAA" />
+              <Blob icon={c.icon} tint="#FFFFFFB3" color={c.deep} />
               <Text style={type.heading}>{c.name}</Text>
               <Text style={type.small} numberOfLines={2}>
                 {c.role}

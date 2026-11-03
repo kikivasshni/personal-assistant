@@ -13,30 +13,15 @@ import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraB
 import { colors, fonts } from '@/theme';
 import { db } from '@/lib/db';
 import { setupNotifications } from '@/lib/nags';
-import { setCommitmentStatus, snoozeCommitment, sweepMissed } from '@/lib/commitments';
+import { sweepMissed } from '@/lib/commitments';
+import { handleNotificationResponse, registerNotificationTask } from '@/lib/notificationActions';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const handled = new Set<string>();
-
 async function handleResponse(r: Notifications.NotificationResponse) {
-  // The same tap can arrive through both the listener and the launch response.
-  const key = `${r.notification.request.identifier}:${r.actionIdentifier}:${r.notification.date}`;
-  if (handled.has(key)) return;
-  handled.add(key);
-  const data = r.notification.request.content.data as { commitmentId?: number; url?: string };
-  if (data.commitmentId && r.actionIdentifier === 'done') {
-    await setCommitmentStatus(data.commitmentId, 'done');
-    return;
-  }
-  if (data.commitmentId && r.actionIdentifier === 'snooze') {
-    await snoozeCommitment(data.commitmentId, 30);
-    return;
-  }
-  if (r.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER && data.url) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    router.push(data.url as any);
-  }
+  const url = await handleNotificationResponse(r);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (url) router.push(url as any);
 }
 
 export default function RootLayout() {
@@ -57,6 +42,7 @@ export default function RootLayout() {
       .then(() => sweepMissed())
       .catch(() => {});
     setupNotifications().catch(() => {});
+    if (Platform.OS !== 'web') registerNotificationTask().catch(() => {});
     if (Platform.OS === 'web') return;
     const sub = Notifications.addNotificationResponseReceivedListener((r) => {
       handleResponse(r).catch(() => {});

@@ -17,7 +17,7 @@ async function nagLines(coachId: string, title: string, when: Date): Promise<Nag
       `Write 3 push-notification lines (max 110 characters each) nudging kirthi to do: "${title}" at ${when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.
 Line 1: friendly reminder in the voice of ${c.name} (${c.role}).
 Line 2: firmer, 30 minutes later, still that coach.
-Line 3: 75 minutes later, from the Drive coach: high-performance, Max Verstappen energy, firm not cruel.
+Line 3: 75 minutes later, from the Motivation coach: high-performance, Max Verstappen energy, firm not cruel.
 Return JSON: {"lines": ["...", "...", "..."]}`,
       { temperature: 0.9 },
     );

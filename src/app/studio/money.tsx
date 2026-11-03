@@ -69,7 +69,7 @@ export default function Money() {
       <Card tint={palette.sage}>
         <Text style={type.title}>Monthly check-in</Text>
         <Text style={type.bodySoft}>Download your DBS e-statement PDF from digibank, then drop it here. Nothing leaves your phone except the call to Gemini.</Text>
-        <Button title="Upload statement PDF" icon="📄" onPress={upload} loading={busy} />
+        <Button title="Upload statement PDF" icon="document-text-outline" onPress={upload} loading={busy} />
         {msg && <Text style={type.small}>{msg}</Text>}
       </Card>
 
@@ -83,7 +83,7 @@ export default function Money() {
 
       {!current ? (
         <Card>
-          <Empty emoji="🌿" title="No statements yet" body="Your first upload sets up your spending categories." />
+          <Empty icon="wallet-outline" title="No statements yet" body="Your first upload sets up your spending categories." />
         </Card>
       ) : (
         <>
@@ -112,10 +112,10 @@ export default function Money() {
           </Section>
 
           <Card tint={palette.lavender}>
-            {report ? <RichText text={report} /> : <Text style={type.bodySoft}>Get Money's read on this month.</Text>}
+            {report ? <RichText text={report} /> : <Text style={type.bodySoft}>Get a written read on this month.</Text>}
             <Button title={report ? 'Rewrite report' : 'Write my report'} variant="soft" onPress={runReport} loading={reporting} />
             <Button
-              title="Talk to Money"
+              title="Talk to the Finance coach"
               variant="ghost"
               onPress={() => router.push(`/chat/finance?prompt=${encodeURIComponent(`Let's go through my ${current} spending.`)}`)}
             />

@@ -8,7 +8,7 @@ import { declarationsFor, runTool } from './tools';
 // One agent, nine personas. The coach decides the persona and which tools
 // are allowed; every coach reads the same shared memory.
 
-const RULES = `You are a coach inside "The Oracle", kirthi's personal AI life OS on their phone. Several coaches share one memory; you can see notes from the others.
+const RULES = `You are a coach inside "Kairos", kirthi's personal life OS on their phone. Several coaches share one memory; you can see notes from the others.
 Style: warm, specific, human. Short paragraphs, under ~150 words unless asked for more. Light **bold** is fine, no headings. Ask at most one question at a time.
 Proactive: when kirthi agrees to do something at a time, call create_commitment. Offer to block calendar time or add a To Do when useful. Save important new long-term facts with remember_fact.
 If a tool returns an error about a missing connection, tell kirthi briefly what to set up in Settings and carry on.`;
@@ -97,7 +97,7 @@ export type Attachment = { mimeType: string; base64: string };
 export async function sendMessage(coachId: string, text: string, attachment?: Attachment): Promise<void> {
   const c = getCoach(coachId);
   const past = (await history(c.id, 16)).filter((m) => m.role !== 'note');
-  await save(c.id, 'user', attachment ? `📎 ${text}` : text);
+  await save(c.id, 'user', attachment ? `[Photo] ${text}` : text);
 
   const contents: GeminiContent[] = past.map((m) => ({
     role: m.role === 'user' ? 'user' : 'model',

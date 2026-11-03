@@ -15,7 +15,13 @@ import { CalEvent, eventTime, listEvents } from '@/lib/integrations/google';
 import { GOOGLE, isConnected } from '@/lib/integrations/oauth';
 import { ensurePermission } from '@/lib/nags';
 
-const MOODS = ['😣', '😕', '😐', '🙂', '😄'];
+const MOODS = [
+  { label: 'Rough', tint: palette.rose, dot: palette.roseDeep },
+  { label: 'Low', tint: palette.peach, dot: palette.peachDeep },
+  { label: 'Okay', tint: palette.butter, dot: palette.butterDeep },
+  { label: 'Good', tint: palette.mint, dot: palette.mintDeep },
+  { label: 'Great', tint: palette.sky, dot: palette.skyDeep },
+];
 
 function greeting() {
   const h = new Date().getHours();
@@ -115,12 +121,12 @@ export default function Today() {
         ) : (
           <View style={{ gap: space.sm }}>
             <Text style={type.bodySoft}>
-              {briefErr ?? 'Your Oracle reads your calendar, tasks and goals and plans the day with you.'}
+              {briefErr ?? 'Kairos reads your calendar, tasks and goals and plans the day with you.'}
             </Text>
             {briefErr?.includes('Settings') ? (
               <Button title="Open settings" variant="soft" onPress={() => router.push('/settings')} />
             ) : (
-              <Button title="Plan my day" icon="✨" onPress={() => runBriefing(false)} loading={briefing} />
+              <Button title="Plan my day" icon="sparkles" onPress={() => runBriefing(false)} loading={briefing} />
             )}
           </View>
         )}
@@ -128,8 +134,11 @@ export default function Today() {
 
       {evening && (
         <Card tint={palette.lilac} onPress={() => router.push('/chat/hq?audit=1')}>
-          <Text style={type.heading}>🌙 Evening audit</Text>
-          <Text style={type.bodySoft}>Two minutes with The Oracle: what got done, what slipped, what moves to tomorrow.</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            <Ionicons name="moon" size={18} color={palette.lilacDeep} />
+            <Text style={type.heading}>Evening audit</Text>
+          </View>
+          <Text style={type.bodySoft}>Two minutes with Planner: what got done, what slipped, what moves to tomorrow.</Text>
         </Card>
       )}
 
@@ -137,13 +146,14 @@ export default function Today() {
         <Card>
           <View style={styles.moodRow}>
             {MOODS.map((m, i) => (
-              <Pressable key={m} onPress={() => saveMood(i)} style={[styles.mood, mood === i && styles.moodActive]}>
-                <Text style={{ fontSize: 28 }}>{m}</Text>
+              <Pressable key={m.label} onPress={() => saveMood(i)} style={[styles.mood, { backgroundColor: mood === i ? m.tint : colors.surfaceSoft }]}>
+                <View style={[styles.moodDot, { backgroundColor: m.dot }]} />
+                <Text style={styles.moodText}>{m.label}</Text>
               </Pressable>
             ))}
           </View>
           {mood != null && mood <= 1 && (
-            <Button title="Talk it through with Calm" variant="soft" icon="🫧" onPress={() => router.push('/chat/wellbeing')} />
+            <Button title="Talk it through" variant="soft" icon="leaf" onPress={() => router.push('/chat/wellbeing')} />
           )}
           {mood != null && mood > 1 && <Text style={[type.small, { textAlign: 'center' }]}>Noted. Your coaches will see this.</Text>}
         </Card>
@@ -159,7 +169,7 @@ export default function Today() {
       >
         {items.length === 0 ? (
           <Card>
-            <Empty emoji="🌱" title="Nothing locked in yet" body="Tell any coach what you'll do and when, and it'll hold you to it." />
+            <Empty icon="checkmark-done-outline" title="Nothing locked in yet" body="Tell any coach what you'll do and when, and it'll hold you to it." />
           </Card>
         ) : (
           <Card style={{ gap: 0, paddingVertical: space.sm }}>
@@ -179,7 +189,7 @@ export default function Today() {
                   <View style={{ flex: 1 }}>
                     <Text style={[type.body, c.status !== 'open' && styles.doneText]}>{c.title}</Text>
                     <Text style={[type.small, late && { color: colors.danger }]}>
-                      {k.emoji} {k.name} · {new Date(c.due_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                      {k.name} · {new Date(c.due_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                       {late ? ' · overdue' : c.status === 'missed' ? ' · missed' : ''}
                     </Text>
                   </View>
@@ -303,7 +313,7 @@ function QuickAdd({ visible, onClose, onSaved }: { visible: boolean; onClose: ()
           placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
         />
-        <Text style={type.small}>You'll get a reminder, a firmer one 30 minutes later, then Drive steps in.</Text>
+        <Text style={type.small}>You'll get a reminder, a firmer one 30 minutes later, then the Motivation coach steps in.</Text>
         <Button title="Commit" onPress={save} loading={saving} disabled={!title.trim() || !resolve()} />
       </View>
     </Modal>
@@ -330,9 +340,10 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   focusNum: { fontFamily: fonts.bodyHeavy, fontSize: 12, color: colors.accent },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  mood: { padding: 6, borderRadius: 18 },
-  moodActive: { backgroundColor: colors.accentSoft },
+  moodRow: { flexDirection: 'row', gap: 6 },
+  mood: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 10, borderRadius: 16 },
+  moodDot: { width: 14, height: 14, borderRadius: 7 },
+  moodText: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.textSoft },
   link: { fontFamily: fonts.bodyHeavy, color: colors.accent, fontSize: 14 },
   item: { flexDirection: 'row', gap: space.md, alignItems: 'center', paddingVertical: 12 },
   itemBorder: { borderTopWidth: 1, borderTopColor: colors.border },

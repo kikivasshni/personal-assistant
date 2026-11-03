@@ -52,7 +52,7 @@ export default function NoteDetail() {
 
       <Button
         title="Quiz me on this"
-        icon="📚"
+        icon="school-outline"
         onPress={() =>
           router.push(
             `/chat/academics?prompt=${encodeURIComponent(`Quiz me on my notes "${note.title}". One question at a time, exam style, and be ruthless about wrong answers.\n\n${note.body.slice(0, 3500)}`)}`,

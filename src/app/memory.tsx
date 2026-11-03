@@ -25,7 +25,7 @@ export default function Memory() {
         <Text style={type.title}>About you</Text>
         <Text style={type.bodySoft}>Every coach reads this first. Keep it current.</Text>
         <Field label="Profile" value={profile} onChangeText={(t) => (setP(t), setSaved(false))} multiline style={{ minHeight: 220 }} />
-        <Button title={saved ? 'Saved ✓' : 'Save profile'} variant="soft" onPress={() => setProfile(profile).then(() => setSaved(true))} />
+        <Button title={saved ? 'Saved' : 'Save profile'} variant="soft" onPress={() => setProfile(profile).then(() => setSaved(true))} />
       </Card>
 
       <Section title={`Remembered facts · ${facts.length}`}>
@@ -35,7 +35,7 @@ export default function Memory() {
         </Card>
         {facts.length === 0 ? (
           <Card>
-            <Empty emoji="🧠" title="Nothing yet" body="Coaches save facts as you talk to them." />
+            <Empty icon="bookmarks-outline" title="Nothing yet" body="Coaches save facts as you talk to them." />
           </Card>
         ) : (
           facts.map((f) => (
@@ -52,7 +52,7 @@ export default function Memory() {
                 <Text style={type.body}>{f.text}</Text>
                 <View style={{ flexDirection: 'row' }}>
                   <Text style={type.small}>
-                    {coach(f.coach ?? 'hq').emoji} {coach(f.coach ?? 'hq').name} · {new Date(f.created_at).toLocaleDateString()}
+                    {coach(f.coach ?? 'hq').name} · {new Date(f.created_at).toLocaleDateString()}
                   </Text>
                 </View>
               </Card>

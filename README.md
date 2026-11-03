@@ -1,10 +1,10 @@
-# The Oracle
+# Kairos
 
-A personal AI life OS for Android: nine coaches that share one memory, nag you until you follow through, and live entirely on your phone. No server.
+Kairos is the ancient Greek word for the right moment to act. This is a personal life OS for Android: nine coaches that share one memory, nag you until you follow through, and live entirely on your phone. No server.
 
 - **Today**: an AI morning briefing built from your calendar, To Do and goals, a mood check-in, today's commitments, food totals and your 7-day follow-through rate. After 6pm it switches to the evening audit.
-- **Coaches**: The Oracle (chief of staff), plus Manifest, Body, Study, Drive, Career, Play, Money and Calm. Each one has its own persona and tools, and they all read the same memory.
-- **Nags**: when you commit to something, the app schedules a reminder, a firmer one 30 minutes later, and a Drive coach escalation at 75 minutes. Tap **Done** on the notification to cancel the rest, or **Snooze 30 min**.
+- **Coaches**: Planner (chief of staff), plus Manifestation, Health, Study, Motivation, Career, Hobbies, Finance and Wellbeing. Each one has its own persona and tools, and they all read the same memory.
+- **Nags**: when you commit to something, the app schedules a reminder, a firmer one 30 minutes later, and an escalation from the Motivation coach at 75 minutes. Tap **Done** on the notification to cancel the rest, or **Snooze 30 min**.
 - **Goal Feed**: YouTube Shorts fetched for each coach's goals, your Pinterest boards, and TikTok, Reels and Shorts links you save. It stops after 10 clips and points you at your next commitment.
 - **Studio**: food photo to macros with PCOS-aware notes, DBS statement PDF to categorised spending (it asks you about the ambiguous ones and remembers your answers), and lecture slides to notes, flashcards and quizzes.
 - **Integrations**: Microsoft To Do, Google Calendar (so it also shows in Notion Calendar), and Notion (Journal entries and school notes).
@@ -56,7 +56,7 @@ When the build finishes, open the link on your phone, install the APK, and allow
 npx expo start                  # add --tunnel if phone and laptop aren't on the same Wi-Fi
 ```
 
-Open **The Oracle** on the phone and pick the dev server. JavaScript changes reload instantly. You only rebuild the APK when native config changes, for example after adding the Google scheme in step 5.
+Open **Kairos** on the phone and pick the dev server. JavaScript changes reload instantly. You only rebuild the APK when native config changes, for example after adding the Google scheme in step 5.
 
 For a standalone app that doesn't need your laptop running, use `npm run build:preview` and install that APK instead.
 
@@ -70,8 +70,8 @@ The defaults are `gemini-3.5-flash-lite` for chat and `gemini-3.8-flash` for bri
 ## 3. Notifications and battery (do this or nags arrive late)
 
 1. **You → Nags and daily rhythm → Save daily schedule.** Allow notifications when asked.
-2. Tap **Allow exact alarms** and turn it on for The Oracle.
-3. On Samsung, go to **Settings → Battery → Background usage limits → Never sleeping apps** and add The Oracle.
+2. Tap **Allow exact alarms** and turn it on for Kairos.
+3. On Samsung, go to **Settings → Battery → Background usage limits → Never sleeping apps** and add Kairos.
 4. Tap **Send a test nag**. It should arrive within 5 seconds.
 
 ## 4. Microsoft To Do
@@ -110,7 +110,11 @@ Events the coaches add go to your primary Google Calendar, so they also appear i
 
 If a YouTube clip won't play inline, tap the open icon to watch it in YouTube.
 
-## 8. Backups
+## 8. Automatic builds
+
+`.eas/workflows/build-android.yml` builds a new preview APK on every push to `main`, once the GitHub repo is linked to the Expo project (expo.dev → project → Settings → GitHub).
+
+## 9. Backups
 
 Everything lives on the phone. Use **You → Export backup** now and then and save the JSON to Google Drive.
 

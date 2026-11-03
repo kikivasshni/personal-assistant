@@ -55,7 +55,7 @@ export async function makeBriefing(force = false): Promise<Briefing> {
   }
 
   const b = await generateJson<Briefing>(
-    `You are The Oracle, kirthi's chief of staff. Write today's morning briefing.
+    `You are kirthi's planner and chief of staff in the Kairos app. Write today's morning briefing.
 Today: ${new Date().toDateString()}.
 About kirthi: ${profile}
 Memory: ${facts.map((f) => f.text).join(' | ')}

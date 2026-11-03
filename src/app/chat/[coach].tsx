@@ -55,7 +55,7 @@ export default function Chat() {
       // Show the user's message straight away.
       setMessages((m) => [
         ...m,
-        { id: -Date.now(), coach: c.id, role: 'user', text: att ? `📎 ${body || 'What do you think?'}` : body, created_at: Date.now() },
+        { id: -Date.now(), coach: c.id, role: 'user', text: att ? `[Photo] ${body || 'What do you think?'}` : body, created_at: Date.now() },
       ]);
       try {
         await sendMessage(c.id, body || 'What do you think of this?', att ?? undefined);
@@ -104,7 +104,7 @@ export default function Chat() {
           headerStyle: { backgroundColor: colors.bg },
           headerTitle: () => (
             <View style={styles.headerTitle}>
-              <Blob emoji={c.emoji} tint={c.tint} size={34} />
+              <Blob icon={c.icon} tint={c.tint} color={c.deep} size={34} />
               <View>
                 <Text style={{ fontFamily: fonts.display, fontSize: 18, color: colors.text }}>{c.name}</Text>
                 <Text style={type.small}>{c.role}</Text>
@@ -127,7 +127,7 @@ export default function Chat() {
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Blob emoji={c.emoji} tint={c.tint} size={72} />
+              <Blob icon={c.icon} tint={c.tint} color={c.deep} size={72} />
               <Text style={[type.title, { textAlign: 'center' }]}>{c.name}</Text>
               <Text style={[type.bodySoft, { textAlign: 'center' }]}>{c.role}</Text>
               <View style={styles.starters}>
@@ -143,6 +143,7 @@ export default function Chat() {
             if (item.role === 'note')
               return (
                 <View style={[styles.note, { backgroundColor: c.tint }]}>
+                  <Ionicons name="checkmark-circle" size={14} color={c.deep} />
                   <Text style={[type.small, { color: c.deep }]}>{item.text}</Text>
                 </View>
               );
@@ -171,7 +172,8 @@ export default function Chat() {
         />
         {attachment && (
           <View style={styles.attachRow}>
-            <Text style={type.small}>📎 Photo attached</Text>
+            <Ionicons name="image" size={14} color={colors.textMuted} />
+            <Text style={type.small}>Photo attached</Text>
             <Pressable onPress={() => setAttachment(null)}>
               <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </Pressable>
@@ -211,7 +213,7 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '86%', borderRadius: radius.md + 2, paddingHorizontal: 14, paddingVertical: 10 },
   mine: { alignSelf: 'flex-end', borderBottomRightRadius: 6 },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderBottomLeftRadius: 6 },
-  note: { alignSelf: 'center', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
+  note: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
   attachRow: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: space.lg, paddingBottom: 4 },
   inputBar: {
     flexDirection: 'row',
