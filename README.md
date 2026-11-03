@@ -112,7 +112,7 @@ If a YouTube clip won't play inline, tap the open icon to watch it in YouTube.
 
 ## 8. Automatic builds
 
-`.eas/workflows/build-android.yml` builds a new preview APK on every push to `main`, once the GitHub repo is linked to the Expo project (expo.dev → project → Settings → GitHub).
+`.eas/workflows/build-android.yml` builds a new preview APK (installable on Android) on every push to `main`, once the GitHub repo is linked to the Expo project (expo.dev → project → Settings → GitHub).
 
 ## 9. Backups
 
