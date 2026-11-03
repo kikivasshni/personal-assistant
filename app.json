@@ -59,6 +59,12 @@
           "imageWidth": 160
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6e78c4a1-6235-4508-acd7-a6cffdf7fa86"
+      }
+    },
+    "owner": "kikivasshni29"
   }
 }
