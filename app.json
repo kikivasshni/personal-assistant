@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Kairos",
-    "slug": "the-oracle",
+    "slug": "personal-assistant",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -62,7 +62,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "6e78c4a1-6235-4508-acd7-a6cffdf7fa86"
+        "projectId": "603a01a4-fbe1-43f7-9dc1-3865172c32cc"
       }
     },
     "owner": "kikivasshni29"
