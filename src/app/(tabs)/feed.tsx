@@ -4,7 +4,6 @@ import {
   FlatList,
   Image,
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,8 +16,9 @@ import { router, useFocusEffect } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Button, Empty, PageHeader, Pill, Screen } from '@/components/ui';
-import { COACHES, coach } from '@/data/coaches';
+import { Button, Empty, PageHeader, Pill, Screen, Sheet } from '@/components/ui';
+import { space as coach, SPACES as COACHES } from '@/data/spaces';
+import { Icon3D } from '@/components/Icon3D';
 import { openCommitments } from '@/lib/commitments';
 import { Commitment, FeedItem } from '@/lib/db';
 import { feedItems, markSeen, refreshPinterest, refreshYouTube, saveLink, toggleSaved } from '@/lib/feed';
@@ -140,7 +140,7 @@ export default function Feed() {
               capped ? (
                 <View style={[styles.stop, { height }]}>
                   <Ionicons name="flag" size={40} color={colors.accent} />
-                  <Text style={[type.title, { textAlign: 'center' }]}>That's {SESSION_CAP}. Now go live it.</Text>
+                  <Text style={[type.title, { textAlign: 'center' }]}>That’s {SESSION_CAP}. Now go live it.</Text>
                   {next ? (
                     <>
                       <Text style={[type.bodySoft, { textAlign: 'center' }]}>Next up: {next.title}</Text>
@@ -184,7 +184,7 @@ function Clip({ item, height, playing, onChanged }: { item: FeedItem; height: nu
           <Image source={{ uri: item.thumb }} style={{ flex: 1 }} resizeMode={item.source === 'pinterest' ? 'cover' : 'cover'} />
         ) : (
           <View style={styles.placeholder}>
-            <Ionicons name={k.icon} size={40} color={k.deep} />
+            <Icon3D name={k.icon} size={64} />
             <Text style={type.bodySoft}>{item.source === 'link' ? 'Saved link' : `Saved ${item.source}`}</Text>
           </View>
         )}
@@ -238,10 +238,7 @@ function AddLink({ visible, onClose, onSaved }: { visible: boolean; onClose: () 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheet}>
-        <Text style={type.title}>Save a clip</Text>
+    <Sheet visible={visible} onClose={onClose} title="Save a clip">
         <Text style={type.bodySoft}>In TikTok, Instagram, YouTube or Pinterest tap Share → Copy link, then paste it here.</Text>
         <View style={{ flexDirection: 'row', gap: space.sm }}>
           <TextInput
@@ -255,7 +252,7 @@ function AddLink({ visible, onClose, onSaved }: { visible: boolean; onClose: () 
           />
           <Button title="Paste" variant="soft" onPress={paste} />
         </View>
-        <Text style={type.label}>For which coach? (optional)</Text>
+        <Text style={type.label}>For which area? (optional)</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
           {COACHES.map((c) => (
             <Pill key={c.id} label={c.name} active={tag === c.id} tint={c.tint} onPress={() => setTag(tag === c.id ? null : c.id)} />
@@ -263,8 +260,7 @@ function AddLink({ visible, onClose, onSaved }: { visible: boolean; onClose: () 
         </ScrollView>
         {err && <Text style={[type.small, { color: colors.danger }]}>{err}</Text>}
         <Button title="Save to feed" onPress={save} loading={saving} disabled={!url.trim()} />
-      </View>
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -275,15 +271,6 @@ const styles = StyleSheet.create({
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm },
   meta: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xs },
   stop: { alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.xl },
-  backdrop: { flex: 1, backgroundColor: '#2E2A3B55' },
-  sheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: space.lg,
-    paddingBottom: space.xxl,
-    gap: space.md,
-  },
   input: {
     fontFamily: fonts.body,
     fontSize: 16,

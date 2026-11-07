@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Button, Card, Empty, Field, Screen, Section } from '@/components/ui';
-import { coach } from '@/data/coaches';
+import { resolve } from '@/data/spaces';
 import { Fact } from '@/lib/db';
 import { addFact, allFacts, deleteFact, getProfile, setProfile } from '@/lib/memory';
 import { palette, space, type } from '@/theme';
@@ -52,7 +52,7 @@ export default function Memory() {
                 <Text style={type.body}>{f.text}</Text>
                 <View style={{ flexDirection: 'row' }}>
                   <Text style={type.small}>
-                    {coach(f.coach ?? 'hq').name} · {new Date(f.created_at).toLocaleDateString()}
+                    {resolve(f.coach ?? 'hq').name} · {new Date(f.created_at).toLocaleDateString()}
                   </Text>
                 </View>
               </Card>

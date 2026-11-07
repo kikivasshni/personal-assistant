@@ -1,21 +1,25 @@
-import { coach } from '@/data/coaches';
+import { resolve } from '@/data/spaces';
 import { Commitment, db, startOfDay } from './db';
 import { generateJson } from './gemini';
 import { cancelIds, NagLines, scheduleChain } from './nags';
 
 // Ask Gemini for three escalating nag lines in the coach's voice.
 // Falls back to templates if Gemini is unreachable, so a nag is never lost.
-async function nagLines(coachId: string, title: string, when: Date): Promise<NagLines> {
-  const fallback: NagLines = [
+function templateLines(title: string): NagLines {
+  return [
     `It's time: ${title}.`,
     `Still not done: ${title}. Start with just 5 minutes.`,
     `You said you'd ${title}. Future you is watching. Do it now.`,
   ];
+}
+
+async function nagLines(coachId: string, title: string, when: Date): Promise<NagLines> {
+  const fallback = templateLines(title);
   try {
-    const c = coach(coachId);
+    const c = resolve(coachId);
     const r = await generateJson<{ lines: string[] }>(
       `Write 3 push-notification lines (max 110 characters each) nudging kirthi to do: "${title}" at ${when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.
-Line 1: friendly reminder in the voice of ${c.name} (${c.role}).
+Line 1: friendly reminder in the voice of the ${c.name} coach (${c.subtitle}).
 Line 2: firmer, 30 minutes later, still that coach.
 Line 3: 75 minutes later, from the Motivation coach: high-performance, Max Verstappen energy, firm not cruel.
 Return JSON: {"lines": ["...", "...", "..."]}`,
@@ -39,9 +43,20 @@ export async function createCommitment(coachId: string, title: string, dueAt: nu
     now,
   );
   const id = res.lastInsertRowId;
-  const lines = await nagLines(coachId, title, new Date(dueAt));
-  const ids = await scheduleChain(id, title, dueAt, lines, coach(coachId).name).catch(() => [] as string[]);
+  // Schedule straight away with template lines so the chat isn't kept
+  // waiting, then swap in lines written in the coach's voice.
+  const name = resolve(coachId).name;
+  const ids = await scheduleChain(id, title, dueAt, templateLines(title), name).catch(() => [] as string[]);
   await d.runAsync('UPDATE commitments SET notification_ids = ? WHERE id = ?', JSON.stringify(ids), id);
+  nagLines(coachId, title, new Date(dueAt))
+    .then(async (lines) => {
+      const cur = await d.getFirstAsync<Commitment>('SELECT * FROM commitments WHERE id = ?', id);
+      if (!cur || cur.status !== 'open' || cur.due_at !== dueAt) return;
+      await cancelIds(JSON.parse(cur.notification_ids || '[]'));
+      const fresh = await scheduleChain(id, title, dueAt, lines, name);
+      await d.runAsync('UPDATE commitments SET notification_ids = ? WHERE id = ?', JSON.stringify(fresh), id);
+    })
+    .catch(() => {});
   return (await d.getFirstAsync<Commitment>('SELECT * FROM commitments WHERE id = ?', id))!;
 }
 
@@ -70,7 +85,7 @@ export async function snoozeCommitment(id: number, minutes = 30) {
     `${c.title}. You already snoozed once.`,
     `Two snoozes is a pattern. ${c.title}, now.`,
   ];
-  const ids = await scheduleChain(id, c.title, due, lines, coach(c.coach).name);
+  const ids = await scheduleChain(id, c.title, due, lines, resolve(c.coach).name);
   await d.runAsync('UPDATE commitments SET due_at = ?, notification_ids = ? WHERE id = ?', due, JSON.stringify(ids), id);
 }
 

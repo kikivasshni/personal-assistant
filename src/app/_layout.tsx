@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -11,7 +11,9 @@ import {
 } from '@expo-google-fonts/fraunces';
 import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
 import { colors, fonts } from '@/theme';
-import { db } from '@/lib/db';
+import { db, kvGet, kvSet } from '@/lib/db';
+import { scheduleAffirmations } from '@/lib/desires';
+import { loadCustomThreads } from '@/lib/hobbies';
 import { setupNotifications } from '@/lib/nags';
 import { sweepMissed } from '@/lib/commitments';
 import { handleNotificationResponse, registerNotificationTask } from '@/lib/notificationActions';
@@ -36,11 +38,19 @@ export default function RootLayout() {
   // Platform never changes at runtime, so this conditional hook call is stable.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const lastResponse = Platform.OS === 'web' ? null : Notifications.useLastNotificationResponse();
+  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     db()
-      .then(() => sweepMissed())
-      .catch(() => {});
+      .then(async () => {
+        // Your own study topics and hobbies must be known before any chat opens.
+        await loadCustomThreads().catch(() => {});
+        setDataReady(true);
+        await sweepMissed();
+        await seedDefaults();
+        scheduleAffirmations().catch(() => {});
+      })
+      .catch(() => setDataReady(true));
     setupNotifications().catch(() => {});
     if (Platform.OS !== 'web') registerNotificationTask().catch(() => {});
     if (Platform.OS === 'web') return;
@@ -51,14 +61,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (lastResponse && loaded) handleResponse(lastResponse).catch(() => {});
-  }, [lastResponse, loaded]);
+    if (lastResponse && loaded && dataReady) handleResponse(lastResponse).catch(() => {});
+  }, [lastResponse, loaded, dataReady]);
 
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync().catch(() => {});
-  }, [loaded]);
+    if (loaded && dataReady) SplashScreen.hideAsync().catch(() => {});
+  }, [loaded, dataReady]);
 
-  if (!loaded) return null;
+  if (!loaded || !dataReady) return null;
 
   return (
     <>
@@ -74,13 +84,27 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="chat/[coach]" options={{ title: '' }} />
-        <Stack.Screen name="studio/food" options={{ title: 'Food log' }} />
-        <Stack.Screen name="studio/money" options={{ title: 'Money' }} />
-        <Stack.Screen name="studio/notes" options={{ title: 'Study notes' }} />
+        <Stack.Screen name="chat/[id]" options={{ title: '' }} />
+        <Stack.Screen name="space/[id]" options={{ title: '' }} />
+        <Stack.Screen name="food" options={{ title: 'Food log' }} />
+        <Stack.Screen name="finance/index" options={{ title: 'Spending' }} />
+        <Stack.Screen name="finance/statement" options={{ title: 'Statements' }} />
+        <Stack.Screen name="notes/index" options={{ title: 'Study notes' }} />
         <Stack.Screen name="notes/[id]" options={{ title: '' }} />
+        <Stack.Screen name="songs/index" options={{ title: 'Songs' }} />
+        <Stack.Screen name="songs/[id]" options={{ title: '' }} />
+        <Stack.Screen name="desires" options={{ title: 'My desires' }} />
+        <Stack.Screen name="mood" options={{ title: 'Moods' }} />
+        <Stack.Screen name="exam" options={{ title: 'Exam date', presentation: 'modal' }} />
         <Stack.Screen name="memory" options={{ title: 'Shared memory' }} />
       </Stack>
     </>
   );
+}
+
+// First-run defaults that come from your profile (cert exams by 1 Dec 2026).
+async function seedDefaults() {
+  if (await kvGet('seeded_v2')) return;
+  for (const id of ['study.aws', 'study.terraform']) if (!(await kvGet(`exam:${id}`))) await kvSet(`exam:${id}`, '2026-12-01');
+  await kvSet('seeded_v2', '1');
 }

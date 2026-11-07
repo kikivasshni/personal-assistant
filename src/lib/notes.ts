@@ -1,6 +1,7 @@
 import { db, Note } from './db';
 import { generateJson, GeminiContent, GeminiPart } from './gemini';
-import { addNotesPage } from './integrations/notion';
+import { appendToPage, createPage, outline, workspaceMap } from './integrations/notion';
+import { hasSecondBrain, saveNote } from './integrations/secondBrain';
 
 export type StudyNotes = {
   title: string;
@@ -40,10 +41,30 @@ export function notesMarkdown(n: StudyNotes): string {
   ].join('\n');
 }
 
+// Lets Gemini decide where new notes belong in your Notion, based on the
+// workspace outline and how your existing module pages are organised.
+export async function placeInNotion(title: string, markdown: string, hint: string, notebook?: string): Promise<string> {
+  // Second brain: a note row in the module's notebook.
+  if (await hasSecondBrain()) return (await saveNote({ notebook: notebook || 'SMU modules', title, markdown, area: 'coding' })).url;
+  const nodes = await workspaceMap();
+  if (!nodes.length) throw new Error('Connect Notion under You → Notion first.');
+  const pick = await generateJson<{ mode: 'create' | 'append'; id: string; title: string }>(
+    `kirthi keeps study notes in Notion. Decide where these new notes go.
+Notes: "${title}" (${hint}).
+Workspace outline (title (id)):
+${outline(nodes, 200)}
+Rules: put them under the page for their module or course if one exists (create a new child page there, titled like its siblings). If no module page exists, create the page under their main school / notes page. Use append only if a page for exactly this lecture already exists.
+Return JSON: {"mode": "create|append", "id": "<8-char id of the parent (create) or page (append)>", "title": "<page title matching sibling naming>"}`,
+    { temperature: 0 },
+  );
+  if (pick.mode === 'append') return appendToPage(pick.id, markdown);
+  return (await createPage(pick.id, pick.title || title, markdown)).url;
+}
+
 export async function saveNotes(n: StudyNotes, pushToNotion: boolean): Promise<Note> {
   const body = notesMarkdown(n);
   let url: string | null = null;
-  if (pushToNotion) url = await addNotesPage(`${n.module ? n.module + ' · ' : ''}${n.title}`, body);
+  if (pushToNotion) url = await placeInNotion(n.title, body, n.module ? `module ${n.module}` : 'lecture notes', n.module || undefined);
   const d = await db();
   const r = await d.runAsync(
     'INSERT INTO notes(module, title, body, flashcards, notion_url, created_at) VALUES(?, ?, ?, ?, ?, ?)',

@@ -122,7 +122,7 @@ export default function FoodScreen() {
         title="Ask the Health coach"
         variant="soft"
         icon="heart-outline"
-        onPress={() => router.push(`/chat/health?prompt=${encodeURIComponent('Rate what I ate today for my PCOS goals and tell me what to eat next.')}`)}
+        onPress={() => router.push(`/chat/health.food?prompt=${encodeURIComponent('Rate what I ate today for my PCOS goals and tell me what to eat next.')}`)}
       />
 
       <Section title="Recent meals">
