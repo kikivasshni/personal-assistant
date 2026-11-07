@@ -30,7 +30,7 @@
       "favicon": "./assets/favicon.png"
     },
     "scheme": [
-      "oracle"
+      "oracle", "com.googleusercontent.apps.113773393811-tmagp12b5fo2o2ghpjjd3nnsvgqu4kbo"
     ],
     "plugins": [
       "expo-router",
