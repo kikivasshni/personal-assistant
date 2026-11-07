@@ -107,6 +107,82 @@ const MIGRATIONS: string[] = [
     value TEXT NOT NULL
   );
   `,
+  // v2: spaces and cards, tasks, desires, songs, practice, workouts, cycle.
+  `
+  CREATE TABLE IF NOT EXISTS custom_threads (
+    id TEXT PRIMARY KEY,
+    space TEXT NOT NULL,
+    title TEXT NOT NULL,
+    subtitle TEXT NOT NULL DEFAULT '',
+    icon TEXT NOT NULL DEFAULT 'sparkles',
+    focus TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS desires (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    detail TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','manifested','released')),
+    scene TEXT,
+    story TEXT,
+    created_at INTEGER NOT NULL,
+    manifested_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS songs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    artist TEXT,
+    status TEXT NOT NULL DEFAULT 'learning' CHECK (status IN ('wishlist','learning','learned')),
+    notes TEXT,
+    tabs TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS practice_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread TEXT NOT NULL,
+    minutes INTEGER,
+    note TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_practice_thread ON practice_log(thread, created_at);
+
+  CREATE TABLE IF NOT EXISTS workouts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    minutes INTEGER,
+    details TEXT,
+    source TEXT NOT NULL DEFAULT 'manual',
+    ext_id TEXT UNIQUE,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS cycle_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    day TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('period','symptom')),
+    note TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_cycle_period_day ON cycle_log(day) WHERE kind = 'period';
+
+  CREATE TABLE IF NOT EXISTS task_links (
+    ms_id TEXT PRIMARY KEY,
+    notion_id TEXT,
+    done INTEGER NOT NULL DEFAULT 0
+  );
+
+  ALTER TABLE transactions ADD COLUMN note TEXT;
+
+  UPDATE messages SET coach = 'health.move' WHERE coach = 'health';
+  UPDATE messages SET coach = 'study.aws' WHERE coach = 'academics';
+  UPDATE messages SET coach = 'hobby.guitar' WHERE coach = 'hobbies';
+  UPDATE messages SET coach = 'manifest.desires' WHERE coach = 'manifest';
+  UPDATE messages SET coach = 'finance.advisor' WHERE coach = 'finance';
+  `,
 ];
 
 async function open() {
@@ -172,7 +248,38 @@ export type Txn = {
   category: string | null;
   needs_review: number;
   question: string | null;
+  note: string | null;
 };
+export type Desire = {
+  id: number;
+  title: string;
+  detail: string | null;
+  status: 'pending' | 'manifested' | 'released';
+  scene: string | null;
+  story: string | null;
+  created_at: number;
+  manifested_at: number | null;
+};
+export type Song = {
+  id: number;
+  title: string;
+  artist: string | null;
+  status: 'wishlist' | 'learning' | 'learned';
+  notes: string | null;
+  tabs: string | null;
+  created_at: number;
+  updated_at: number;
+};
+export type Workout = {
+  id: number;
+  title: string;
+  minutes: number | null;
+  details: string | null;
+  source: string;
+  ext_id: string | null;
+  created_at: number;
+};
+export type Mood = { id: number; mood: number; note: string | null; created_at: number };
 export type Note = {
   id: number;
   module: string | null;
@@ -202,6 +309,17 @@ export function startOfDay(d = new Date()): number {
   return x.getTime();
 }
 
+export function parseDayKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
 export function dayKey(d = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -224,6 +342,13 @@ export async function exportAll(): Promise<Record<string, unknown[]>> {
     'moods',
     'briefings',
     'kv',
+    'custom_threads',
+    'desires',
+    'songs',
+    'practice_log',
+    'workouts',
+    'cycle_log',
+    'task_links',
   ];
   const out: Record<string, unknown[]> = {};
   for (const t of tables) out[t] = await d.getAllAsync(`SELECT * FROM ${t}`);

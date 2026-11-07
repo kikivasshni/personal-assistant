@@ -13,8 +13,6 @@ export const SECRET_KEYS = {
   googleClientId: 'google_client_id',
   googleTokens: 'google_tokens',
   notionToken: 'notion_token',
-  notionJournalDb: 'notion_journal_db',
-  notionNotesPage: 'notion_notes_page',
 } as const;
 
 export type SecretKey = keyof typeof SECRET_KEYS;

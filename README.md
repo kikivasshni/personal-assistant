@@ -1,15 +1,22 @@
 # Kairos
 
-Kairos is the ancient Greek word for the right moment to act. This is a personal life OS for Android: nine coaches that share one memory, nag you until you follow through, and live entirely on your phone. No server.
+Kairos is the ancient Greek word for the right moment to act. This is a personal life OS for Android: coaches for every area of your life that share one memory, keep your Notion up to date, and nag you until you follow through. No server.
 
-- **Today**: an AI morning briefing built from your calendar, To Do and goals, a mood check-in, today's commitments, food totals and your 7-day follow-through rate. After 6pm it switches to the evening audit.
-- **Coaches**: Planner (chief of staff), plus Manifestation, Health, Study, Motivation, Career, Hobbies, Finance and Wellbeing. Each one has its own persona and tools, and they all read the same memory.
-- **Nags**: when you commit to something, the app schedules a reminder, a firmer one 30 minutes later, and an escalation from the Motivation coach at 75 minutes. Tap **Done** on the notification to cancel the rest, or **Snooze 30 min**.
-- **Goal Feed**: YouTube Shorts fetched for each coach's goals, your Pinterest boards, and TikTok, Reels and Shorts links you save. It stops after 10 clips and points you at your next commitment.
-- **Studio**: food photo to macros with PCOS-aware notes, DBS statement PDF to categorised spending (it asks you about the ambiguous ones and remembers your answers), and lecture slides to notes, flashcards and quizzes.
-- **Integrations**: Microsoft To Do, Google Calendar (so it also shows in Notion Calendar), and Notion (Journal entries and school notes).
+- **Today**: an AI briefing, a mood check-in (with a monthly mood calendar), your to-dos for today and this week, locked-in commitments, calendar, and quick body stats (food, steps, cycle day).
+- **Life**: your areas as rooms, each with its own cards:
+  - **Planner**, **Motivation**, **Career**, **Wellbeing**: one coach each.
+  - **Health**: Food & diet, Workouts (Samsung Health steps and sessions), PCOS & cycle (phase-aware advice, cycle tracking).
+  - **Study**: AWS SAP-C03, Terraform Associate, SMU modules, plus any topic you add. Exam countdowns and study streaks.
+  - **Hobbies**: Electric guitar (song list, tabs rendered on a fretboard card, a coach that chases you to practise), Kathak, Photography, F1, Aviation, plus any hobby you add.
+  - **Manifestation**: Neville's teachings, and My desires (what you're assuming vs what has manifested, with morning and night affirmations as notifications).
+  - **Finance**: Spending (weekly, monthly, yearly; synced to a Notion overview page), Monthly statement (upload a DBS PDF; Kairos asks about anything unclear, one question at a time), and an Advisor / trading coach that knows your numbers.
+- Every card is a chat with a live panel on top (macros, steps, cycle, exam countdown, songs, desires) that folds away while you type.
+- **Notion**: Kairos maps every page your integration can see. Coaches append to the right page, or create a new page where it belongs, after reading a sibling page to copy your structure.
+- **Tasks**: Microsoft To Do is the hub. Samsung Reminder syncs with it, and a Notion tasks database is kept in step both ways.
+- **Nags**: commitments get a reminder, a firmer one 30 minutes later, and an escalation from the Motivation coach at 75 minutes.
+- **Goal Feed**: YouTube Shorts per area, Pinterest boards, and TikTok, Reels and Shorts links you save.
 
-Everything is stored in SQLite on the phone. Keys and tokens are kept in the Android Keystore. The only network calls go out to Gemini, Microsoft, Google, Notion, YouTube and Pinterest.
+Everything is stored in SQLite on the phone. Keys and tokens are kept in the Android Keystore. Icons are Microsoft's Fluent Emoji 3D (MIT, see `assets/icons3d/LICENSE.txt`).
 
 ## Stack
 
@@ -17,25 +24,26 @@ Expo SDK 58 · React Native 0.88 · TypeScript · Expo Router · expo-sqlite · 
 
 ```
 src/
-  app/                 screens (Expo Router)
-    (tabs)/            Today, Coaches, Feed, Studio, You
-    chat/[coach].tsx   chat with any coach
-    studio/            food, money, notes
-    notes/[id].tsx     note detail and flashcards
-    memory.tsx         profile and shared memory
-  components/          UI kit (cards, buttons, pills) and Markdown renderer
-  data/coaches.ts      the 9 coaches: personas, tools, starter prompts, feed topics
+  app/                   screens (Expo Router)
+    (tabs)/              Today, Life, Feed, You
+    space/[id].tsx       an area and its cards
+    chat/[id].tsx        chat with any card (e.g. /chat/hobby.guitar)
+    finance/             spending overview, statement upload + questions
+    mood.tsx desires.tsx songs/ food.tsx notes/ exam.tsx memory.tsx
+  components/            UI kit, Icon3D, RichText (tabs, tables, code), ThreadPanel, NotionPicker
+  data/spaces.ts         areas, cards, personas, tools, starters
   lib/
-    agent.ts           chat loop, context building, function calling
-    tools.ts           tools the coaches can call
-    memory.ts          profile, facts, cross-coach digest
-    commitments.ts     commitments and nag chains
-    nags.ts            notifications, daily briefing/audit schedule
-    briefing.ts        morning briefing
-    feed.ts            YouTube, Pinterest, saved links
-    food.ts finance.ts notes.ts backup.ts
-    integrations/      oauth, microsoft (To Do), google (Calendar), notion
-  theme.ts             colours, fonts, spacing: restyle everything here
+    agent.ts             chat loop, per-card context, streaming, function calling
+    gemini.ts            REST client: retries, model fallback, streaming, thinking level
+    tools.ts             tools the coaches can call
+    tasks.ts             To Do + Notion tasks sync
+    health.ts            Samsung Health via Health Connect, workouts, cycle
+    desires.ts           desires and scheduled affirmations
+    hobbies.ts           songs, practice logs, your own cards
+    moods.ts finance.ts food.ts notes.ts memory.ts commitments.ts nags.ts feed.ts
+    integrations/        oauth, microsoft (To Do), google (Calendar), notion (workspace map)
+  theme.ts               colours, fonts, spacing
+assets/icons3d/          3D icons
 ```
 
 ## 1. Get it on your phone
@@ -65,7 +73,12 @@ For a standalone app that doesn't need your laptop running, use `npm run build:p
 1. Create a key at <https://aistudio.google.com/apikey>.
 2. In the app, open **You → Gemini**, paste the key, then tap **Test Gemini**.
 
-The defaults are `gemini-3.5-flash-lite` for chat and `gemini-3.8-flash` for briefings, PDFs, notes and photos. If you hit a `404`, the model name has changed, so update it there. If you hit a `429`, you've reached the free-tier limit.
+The defaults are `gemini-3.5-flash-lite` for chat and `gemini-3.8-flash` for briefings, PDFs, notes and photos.
+
+- **503 "high demand"** means Google's servers for that model are overloaded. It isn't your quota. Kairos retries twice with backoff, then switches to your other model. Free-tier traffic is the first to be shed when a model is busy, so turning on billing for the API key (Tier 1) makes 503s much rarer.
+- **429** means you've hit your rate limit. Kairos switches to the other model straight away.
+- **Speed**: chat streams the reply as it's written and runs with low thinking effort. A lite model for chat is the fastest choice. Keep the bigger model for the heavy jobs.
+- **404**: the model name has changed, so update it there.
 
 ## 3. Notifications and battery (do this or nags arrive late)
 
@@ -74,13 +87,14 @@ The defaults are `gemini-3.5-flash-lite` for chat and `gemini-3.8-flash` for bri
 3. On Samsung, go to **Settings → Battery → Background usage limits → Never sleeping apps** and add Kairos.
 4. Tap **Send a test nag**. It should arrive within 5 seconds.
 
-## 4. Microsoft To Do
+## 4. Microsoft To Do (and Samsung Reminder)
 
 Use your existing Azure app registration:
 
 1. Go to **Azure portal → App registrations → your app → Authentication → Add a platform → Mobile and desktop applications**.
 2. Add the custom redirect URI `oracle://auth`. Leave "Allow public client flows" on.
 3. In the app, open **You → Microsoft To Do**, paste the Application (client) ID, then tap **Connect Microsoft**.
+4. In **Samsung Reminder → Settings**, turn on **Sync with Microsoft To Do**. Tasks you add in Kairos now show up there, and ticking them off anywhere syncs back.
 
 ## 5. Google Calendar
 
@@ -99,10 +113,20 @@ Events the coaches add go to your primary Google Calendar, so they also appear i
 ## 6. Notion
 
 1. Create an internal integration at <https://www.notion.so/my-integrations> and copy the token.
-2. Open your **Journal** database and choose **••• → Connections → add your integration**. Do the same for the page where school notes should go.
-3. In the app, open **You → Notion**. Paste the token, the Journal database link and the notes page link, then tap **Test Notion**.
+2. In Notion, open each top-level page Kairos should work in (school notes, hobbies, finance, your tasks database) and choose **••• → Connections → add your integration**. Sub-pages are included.
+3. In the app, open **You → Notion**, paste the token and tap **Scan my Notion**. Check that it found your **Tasks database** and a page for **Finance reports** (or pick them).
 
-## 7. Goal Feed
+The coaches get an outline of your workspace. When you tell one something worth keeping, it appends to the matching page, or reads a sibling page and creates a new one in the same style and place. The map refreshes every 6 hours, or when you scan again.
+
+## 7. Samsung Health
+
+1. Rebuild the development APK once (`npm run build:dev`). Health Connect is a native module, so it isn't in older builds.
+2. In **Samsung Health → Settings → Health Connect**, allow Samsung Health to share steps, exercise, sleep, weight and cycle data.
+3. In Kairos, open **You → Samsung Health → Connect** and allow the permissions.
+
+You don't need Google's Health Connect approval for a sideloaded APK. That's only for the Play Store.
+
+## 8. Goal Feed
 
 - **YouTube**: in the Google Cloud console, enable **YouTube Data API v3** and create an API key, then paste it under **You → Goal Feed**. The free quota is 10,000 units a day, and a full refresh uses about 900.
 - **Pinterest**: add public boards, one per line, as `username/board-name`. The app reads each board's RSS feed.
@@ -110,11 +134,11 @@ Events the coaches add go to your primary Google Calendar, so they also appear i
 
 If a YouTube clip won't play inline, tap the open icon to watch it in YouTube.
 
-## 8. Automatic builds
+## 9. Automatic builds
 
 `.eas/workflows/build-android.yml` builds a new preview APK (installable on Android) on every push to `main`, once the GitHub repo is linked to the Expo project (expo.dev → project → Settings → GitHub).
 
-## 9. Backups
+## 10. Backups
 
 Everything lives on the phone. Use **You → Export backup** now and then and save the JSON to Google Drive.
 
@@ -126,5 +150,6 @@ The whole setup runs on free tiers: Gemini (free tier), YouTube Data API, Notion
 
 ```sh
 npx tsc --noEmit                              # typecheck
+npx eslint src                                # lint
 npx expo export --platform android            # check the JS bundle builds
 ```

@@ -21,7 +21,7 @@ export default function NotesScreen() {
 
   const load = useCallback(async () => {
     setNotes(await allNotes());
-    const ok = !!(await getSecret('notionToken')) && !!(await getSecret('notionNotesPage'));
+    const ok = !!(await getSecret('notionToken'));
     setHasNotion(ok);
     if (ok) setToNotion(true);
   }, []);
@@ -64,7 +64,7 @@ export default function NotesScreen() {
     <Screen>
       <Card tint={palette.sky}>
         <Text style={type.title}>Make notes</Text>
-        <Text style={type.bodySoft}>Add lecture slides, PDFs or photos of the whiteboard. You'll get clean notes, key terms, likely exam questions and flashcards.</Text>
+        <Text style={type.bodySoft}>Add lecture slides, PDFs or photos of the whiteboard. You’ll get clean notes, key terms, likely exam questions and flashcards.</Text>
         <Button title={files.length ? 'Add more files' : 'Choose files'} icon="attach" variant={files.length ? 'soft' : 'primary'} onPress={pick} />
         {files.map((f, i) => (
           <Text key={i} style={type.small}>

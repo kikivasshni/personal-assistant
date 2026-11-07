@@ -1,7 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useContext } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleProp,
   StyleSheet,
@@ -13,38 +16,139 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import type { IconName } from '@/data/coaches';
+import type { IconName } from '@/data/spaces';
 import { colors, fonts, gradients, radius, shadow, space, type } from '@/theme';
+import { Icon3D, Icon3DName } from './Icon3D';
+
+// Expo apps are edge-to-edge on Android, so the window no longer resizes for
+// the keyboard. Every screen with inputs needs a KeyboardAvoidingView with
+// behavior="padding", offset by the navigation header above it.
+export function useHeaderOffset() {
+  return useContext(HeaderHeightContext) ?? 0;
+}
 
 export function Screen({
   children,
   scroll = true,
   padded = true,
   header,
+  onRefresh,
+  refreshing = false,
 }: {
   children: ReactNode;
   scroll?: boolean;
   padded?: boolean;
   header?: ReactNode;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const headerOffset = useHeaderOffset();
   const inner = padded ? { paddingHorizontal: space.lg } : null;
   return (
     <LinearGradient colors={gradients.screen} style={styles.flex}>
-      {header ? <View style={{ paddingTop: insets.top + space.sm }}>{header}</View> : <View style={{ height: space.sm }} />}
-      {scroll ? (
-        <ScrollView
-          contentContainerStyle={[inner, { paddingBottom: space.xxl * 2, gap: space.md }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.flex, inner]}>{children}</View>
-      )}
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerOffset} style={styles.flex}>
+        {header ? <View style={{ paddingTop: insets.top + space.sm }}>{header}</View> : <View style={{ height: space.sm }} />}
+        {scroll ? (
+          <ScrollView
+            contentContainerStyle={[inner, { paddingBottom: space.xxl * 2 + insets.bottom, gap: space.md }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} /> : undefined}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={[styles.flex, inner]}>{children}</View>
+        )}
+      </KeyboardAvoidingView>
+    </LinearGradient>
+  );
+}
+
+// Bottom sheet that stays above the keyboard and the Android navigation bar.
+export function Sheet({
+  visible,
+  onClose,
+  title,
+  children,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title?: string;
+  children: ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + space.lg }]}>
+          <View style={styles.grabber} />
+          {title ? <Text style={type.title}>{title}</Text> : null}
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space.md }} style={{ maxHeight: 560 }} showsVerticalScrollIndicator={false}>
+            {children}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// Pill-style segmented control.
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View style={styles.segmented}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              onChange(o.value);
+            }}
+            style={[styles.segment, on && styles.segmentOn]}
+          >
+            <Text style={[styles.segmentText, on && { color: colors.text }]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// Thin progress bar.
+export function Bar({ value, max, color, track = colors.surfaceSoft, height = 8 }: { value: number; max: number; color: string; track?: string; height?: number }) {
+  const pct = max > 0 ? Math.min(100, Math.max(0, (100 * value) / max)) : 0;
+  return (
+    <View style={{ height, borderRadius: height / 2, backgroundColor: track, overflow: 'hidden' }}>
+      <View style={{ width: `${pct}%`, height, borderRadius: height / 2, backgroundColor: color }} />
+    </View>
+  );
+}
+
+// Large 3D icon + title, for the top of space and tool screens.
+export function SpaceHeader({ icon, tint, eyebrow, title, body }: { icon: Icon3DName | string; tint: string; eyebrow?: string; title: string; body?: string }) {
+  return (
+    <LinearGradient colors={[tint, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.spaceHeader}>
+      <Icon3D name={icon} size={64} />
+      <View style={{ flex: 1, gap: 2 }}>
+        {eyebrow ? <Text style={type.label}>{eyebrow}</Text> : null}
+        <Text style={type.title}>{title}</Text>
+        {body ? <Text style={type.bodySoft}>{body}</Text> : null}
+      </View>
     </LinearGradient>
   );
 }
@@ -284,4 +388,19 @@ export const styles = StyleSheet.create({
   },
   stat: { flex: 1, borderRadius: radius.md, padding: space.md, gap: 2 },
   statValue: { fontFamily: fonts.display, fontSize: 22, color: colors.text },
+  backdrop: { flex: 1, backgroundColor: '#2E2A3B55' },
+  sheet: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingHorizontal: space.lg,
+    paddingTop: space.sm,
+    gap: space.md,
+  },
+  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.border, marginBottom: space.xs },
+  segmented: { flexDirection: 'row', backgroundColor: colors.surfaceSoft, borderRadius: radius.pill, padding: 4 },
+  segment: { flex: 1, paddingVertical: 8, borderRadius: radius.pill, alignItems: 'center' },
+  segmentOn: { backgroundColor: colors.surface, ...shadow, shadowOpacity: 0.06, elevation: 1 },
+  segmentText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textMuted },
+  spaceHeader: { flexDirection: 'row', alignItems: 'center', gap: space.md, borderRadius: radius.lg, padding: space.lg, ...shadow },
 });

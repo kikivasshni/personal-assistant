@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Field, PageHeader, Screen, Section } from '@/components/ui';
@@ -7,7 +7,11 @@ import { shareBackup } from '@/lib/backup';
 import { kvGet, kvSet } from '@/lib/db';
 import { generateText } from '@/lib/gemini';
 import { connect, disconnect, GOOGLE, googleScheme, isConnected, MICROSOFT, Provider } from '@/lib/integrations/oauth';
-import { testNotion } from '@/lib/integrations/notion';
+import { NotionNode, testNotion, workspaceMap } from '@/lib/integrations/notion';
+import { NotionPicker } from '@/components/NotionPicker';
+import { connectHealth, healthAvailable, healthConnected, openHealthSettings } from '@/lib/health';
+import { notionTasksDb } from '@/lib/tasks';
+import { financeNotionParent, setFinanceNotionParent } from '@/lib/finance';
 import { ensurePermission, getDailyTimes, openAlarmSettings, scheduleDaily, testNotification } from '@/lib/nags';
 import { DEFAULT_HEAVY_MODEL, DEFAULT_MODEL, getSecret, SecretKey, setSecret } from '@/lib/secrets';
 import { colors, palette, space, type } from '@/theme';
@@ -63,6 +67,18 @@ function SecretField({
   );
 }
 
+function Row({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: space.sm }}>
+      <View style={{ flex: 1 }}>
+        <Text style={type.label}>{label}</Text>
+        <Text style={type.body}>{value}</Text>
+      </View>
+      <Text style={[type.small, { color: colors.accent }]}>Change</Text>
+    </Pressable>
+  );
+}
+
 function Connection({ p, hint }: { p: Provider; hint: string }) {
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -104,6 +120,10 @@ export default function Settings() {
   const [boards, setBoards] = useState('');
   const [googleId, setGoogleId] = useState('');
   const [notionMsg, setNotionMsg] = useState<string | null>(null);
+  const [notionTesting, setNotionTesting] = useState(false);
+  const [targets, setTargets] = useState<{ tasks: string | null; finance: string | null }>({ tasks: null, finance: null });
+  const [picker, setPicker] = useState<'tasks' | 'finance' | null>(null);
+  const [health, setHealth] = useState<'unavailable' | 'off' | 'on'>('off');
   const [lastBackup, setLastBackup] = useState<string | null>(null);
 
   useFocusEffect(
@@ -112,8 +132,17 @@ export default function Settings() {
       kvGet('pinterest_boards').then((b) => setBoards(b ?? ''));
       getSecret('googleClientId').then((g) => setGoogleId(g ?? ''));
       kvGet('last_backup_at').then((b) => setLastBackup(b ? new Date(Number(b)).toLocaleString() : null));
+      loadTargets();
+      (async () => setHealth(!(await healthAvailable()) ? 'unavailable' : (await healthConnected()) ? 'on' : 'off'))().catch(() => {});
     }, []),
   );
+
+  // Which Notion database / page tasks and finance write to (auto-detected unless chosen).
+  async function loadTargets() {
+    const nodes = await workspaceMap().catch(() => [] as NotionNode[]);
+    const title = (id: string | null) => (id ? (nodes.find((n) => n.id === id.replace(/-/g, ''))?.title ?? 'chosen page') : null);
+    setTargets({ tasks: title(await notionTasksDb().catch(() => null)), finance: title(await financeNotionParent().catch(() => null)) });
+  }
 
   const testGemini = async () => {
     setTesting(true);
@@ -155,13 +184,19 @@ export default function Settings() {
       <Section title="Gemini">
         <Card>
           <SecretField k="geminiApiKey" label="API key" placeholder="From aistudio.google.com/apikey" />
-          <SecretField k="geminiModel" label="Everyday model" placeholder={DEFAULT_MODEL} secure={false} />
+          <SecretField
+            k="geminiModel"
+            label="Chat model"
+            placeholder={DEFAULT_MODEL}
+            secure={false}
+            hint="Used for chats, with low thinking effort and streaming so replies start fast."
+          />
           <SecretField
             k="geminiHeavyModel"
             label="Heavy model"
             placeholder={DEFAULT_HEAVY_MODEL}
             secure={false}
-            hint="Used for briefings, PDFs, notes and photos in chat."
+            hint="Used for statements, notes, photos and briefings. Each model is the other's backup: if one is overloaded (503) after a few retries, Kairos switches to the other."
           />
           <Button title="Test Gemini" variant="soft" onPress={testGemini} loading={testing} />
           {gemini && <Text style={type.small}>{gemini}</Text>}
@@ -189,6 +224,10 @@ export default function Settings() {
 
       <Section title="Microsoft To Do">
         <Card>
+          <Text style={type.small}>
+            Your to-do list. To see the same tasks in Samsung Reminder: Reminder → Settings → Sync with Microsoft To Do. Tasks also mirror into your
+            Notion tasks database (see Notion below).
+          </Text>
           <SecretField k="msClientId" label="Application (client) ID" secure={false} placeholder="From your Azure app registration" />
           <Connection
             p={MICROSOFT}
@@ -220,19 +259,66 @@ export default function Settings() {
       <Section title="Notion">
         <Card>
           <SecretField k="notionToken" label="Integration token" placeholder="ntn_… from notion.so/my-integrations" />
-          <SecretField k="notionJournalDb" label="Journal database link" secure={false} placeholder="Paste the database URL" />
-          <SecretField k="notionNotesPage" label="School notes page link" secure={false} placeholder="Paste the page URL" />
+          <Text style={type.small}>
+            In Notion, open each top-level page you want Kairos to work in (school notes, hobbies, finance, tasks) and choose ••• → Connections → your
+            integration. Sub-pages are included. Kairos maps the structure and the coaches decide where new notes go.
+          </Text>
           <Button
-            title="Test Notion"
+            title="Scan my Notion"
             variant="soft"
-            onPress={() =>
-              testNotion()
-                .then((w) => setNotionMsg(`Connected to ${w}`))
-                .catch((e: Error) => setNotionMsg(e.message))
-            }
+            icon="search"
+            loading={notionTesting}
+            onPress={async () => {
+              setNotionTesting(true);
+              try {
+                setNotionMsg(await testNotion());
+                await loadTargets();
+              } catch (e) {
+                setNotionMsg(e instanceof Error ? e.message : String(e));
+              } finally {
+                setNotionTesting(false);
+              }
+            }}
           />
           {notionMsg && <Text style={type.small}>{notionMsg}</Text>}
-          <Text style={type.small}>Share the Journal database and notes page with your integration (••• → Connections).</Text>
+          <Row label="Tasks database" value={targets.tasks ?? 'None found'} onPress={() => setPicker('tasks')} />
+          <Row label="Finance reports under" value={targets.finance ?? 'None found'} onPress={() => setPicker('finance')} />
+          <NotionPicker
+            visible={picker != null}
+            kind={picker === 'tasks' ? 'database' : 'page'}
+            title={picker === 'tasks' ? 'Your tasks database' : 'Where finance reports go'}
+            onClose={() => setPicker(null)}
+            onPick={async (n) => {
+              if (picker === 'tasks') await kvSet('notion_tasks_db', n.id);
+              else await setFinanceNotionParent(n.id);
+              loadTargets();
+            }}
+          />
+        </Card>
+      </Section>
+
+      <Section title="Samsung Health">
+        <Card>
+          <Text style={type.bodySoft}>
+            Steps, workouts, sleep, weight and your cycle flow from Samsung Health through Health Connect into the Health coaches.
+          </Text>
+          <Text style={type.small}>
+            First, in Samsung Health: Settings → Health Connect → allow Samsung Health to share data. Then connect here.
+          </Text>
+          {health === 'unavailable' ? (
+            <Text style={type.small}>Health Connect isn&apos;t available in this build. Install the new development build (see README).</Text>
+          ) : health === 'on' ? (
+            <Button title="Connected · manage permissions" variant="ghost" onPress={openHealthSettings} />
+          ) : (
+            <Button
+              title="Connect Samsung Health"
+              onPress={() =>
+                connectHealth()
+                  .then((ok) => setHealth(ok ? 'on' : 'off'))
+                  .catch((e: Error) => Alert.alert("Couldn't connect", e.message))
+              }
+            />
+          )}
         </Card>
       </Section>
 

@@ -1,4 +1,4 @@
-import { COACHES, coach } from '@/data/coaches';
+import { space, SPACES } from '@/data/spaces';
 import { db, FeedItem, kvGet, kvSet } from './db';
 import { generateJson } from './gemini';
 import { getSecret } from './secrets';
@@ -78,12 +78,12 @@ export async function saveLink(url: string, coachId?: string): Promise<FeedItem[
 async function guessCoach(text: string): Promise<string> {
   try {
     const r = await generateJson<{ coach: string }>(
-      `Which coach does this saved clip best support? Options: ${COACHES.map((c) => `${c.id} (${c.role})`).join(', ')}.
+      `Which coach does this saved clip best support? Options: ${SPACES.map((c) => `${c.id} (${c.tagline})`).join(', ')}.
 Clip: ${text}
 Return {"coach": "<id>"}`,
       { temperature: 0 },
     );
-    return coach(r.coach).id;
+    return space(r.coach).id;
   } catch {
     return 'hq';
   }
@@ -99,7 +99,7 @@ type YtSearch = {
 export async function refreshYouTube(coachIds?: string[]): Promise<number> {
   const key = await getSecret('youtubeApiKey');
   if (!key) throw new Error('Add a YouTube Data API key in Settings to fetch Shorts.');
-  const targets = (coachIds ?? COACHES.map((c) => c.id)).map(coach);
+  const targets = (coachIds ?? SPACES.map((c) => c.id)).map(space);
   let added = 0;
   for (const c of targets) {
     const seeds = c.feedSeeds;

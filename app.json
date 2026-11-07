@@ -23,14 +23,21 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.CAMERA",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_MENSTRUATION"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "scheme": [
-      "oracle", "com.googleusercontent.apps.113773393811-tmagp12b5fo2o2ghpjjd3nnsvgqu4kbo"
+      "oracle",
+      "com.googleusercontent.apps.113773393811-tmagp12b5fo2o2ghpjjd3nnsvgqu4kbo"
     ],
     "plugins": [
       "expo-router",
@@ -57,6 +64,15 @@
           "backgroundColor": "#FBF7F2",
           "image": "./assets/splash-icon.png",
           "imageWidth": 160
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ],
