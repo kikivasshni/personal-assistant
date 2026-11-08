@@ -204,20 +204,19 @@ export async function logFoodToNotion(m: {
 
 const TRAINING_TYPES = ['Easy', 'Long', 'Tempo', 'Intervals', 'Race', 'Strength'];
 
+// The training log's Type for a session, from its title.
+export function guessTrainingType(title: string, type?: string | null): string {
+  if (type && TRAINING_TYPES.includes(type)) return type;
+  if (!/run|km|jog/i.test(title)) return 'Strength';
+  if (/long/i.test(title)) return 'Long';
+  if (/tempo/i.test(title)) return 'Tempo';
+  if (/interval/i.test(title)) return 'Intervals';
+  return 'Easy';
+}
+
 export async function logTrainingToNotion(w: { title: string; day: string; minutes?: number | null; distanceKm?: number | null; type?: string | null; notes?: string | null }) {
   const d = await dbs();
-  const guess =
-    w.type && TRAINING_TYPES.includes(w.type)
-      ? w.type
-      : /run|km|jog/i.test(w.title)
-        ? /long/i.test(w.title)
-          ? 'Long'
-          : /tempo/i.test(w.title)
-            ? 'Tempo'
-            : /interval/i.test(w.title)
-              ? 'Intervals'
-              : 'Easy'
-        : 'Strength';
+  const guess = guessTrainingType(w.title, w.type);
   await insertRow(d.training, {
     Session: { title: rich(w.title) },
     Date: { date: { start: w.day } },

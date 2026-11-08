@@ -222,6 +222,19 @@ function partsOf(json: GenerateResponse): GeminiPart[] {
   return parts;
 }
 
+// Models sometimes trail off into runs of blank lines, whitespace or invisible
+// characters (zero-width spaces etc.). Rendered literally, each one is a line
+// of nothing, so a reply can end in a screen-tall empty bubble. Strip the
+// invisibles, collapse blank runs to one gap, and trim the ends.
+export function cleanReply(text: string): string {
+  return text
+    .replace(/\r/g, '')
+    .replace(/[​-‍⁠﻿­ㅤᅟᅠ]/g, '')
+    .replace(/[ \t ]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function textOf(parts: GeminiPart[]): string {
   return parts
     .filter((p) => !p.thought)

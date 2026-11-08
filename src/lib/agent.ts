@@ -3,7 +3,8 @@ import { openCommitments } from './commitments';
 import { db, kvGet, Message, startOfDay } from './db';
 import { listDesires, todaysAffirmations } from './desires';
 import { financeContext } from './finance';
-import { GeminiContent, GeminiPart, generateRaw, textOf } from './gemini';
+import { habitsContext } from './habits';
+import { cleanReply, GeminiContent, GeminiPart, generateRaw, textOf } from './gemini';
 import { cycleInfo, recentSymptoms, recentWorkouts, snapshot } from './health';
 import { listSongs, practiceStats } from './hobbies';
 import { outline, workspaceMap } from './integrations/notion';
@@ -158,13 +159,14 @@ async function notionContext(t: Resolved): Promise<string> {
 }
 
 export async function buildSystem(t: Resolved, query: string): Promise<string> {
-  const [profile, facts, digest, open, extras, notion] = await Promise.all([
+  const [profile, facts, digest, open, extras, notion, habits] = await Promise.all([
     getProfile(),
     relevantFacts(query),
     crossCoachDigest(t.id),
     openCommitments(),
     cardContext(t).catch(() => ''),
     notionContext(t),
+    habitsContext().catch(() => ''),
   ]);
   return [
     RULES,
@@ -176,6 +178,7 @@ export async function buildSystem(t: Resolved, query: string): Promise<string> {
     open.length
       ? `\n## Open commitments\n${open.slice(0, 12).map((x) => `- #${x.id} ${x.title} (due ${fmtTime(x.due_at)})`).join('\n')}`
       : '',
+    habits ? `\n## Habits\n${habits}` : '',
     extras ? `\n## Live context for this card\n${extras}` : '',
     notion ? `\n## Notion\n${notion}` : '',
   ].join('\n');
@@ -212,6 +215,7 @@ const TOOL_STATUS: Record<string, string> = {
   list_calendar_events: 'Checking your calendar',
   create_commitment: 'Locking it in',
   find_clips: 'Finding clips',
+  log_habit: 'Ticking your habit tracker',
 };
 
 export type SendCallbacks = {
@@ -256,7 +260,7 @@ async function converse(t: Resolved, text: string, past: Message[], _userMsgId: 
     });
     const calls = parts.filter((p) => p.functionCall);
     if (!calls.length) {
-      reply = textOf(parts);
+      reply = cleanReply(textOf(parts));
       break;
     }
     contents.push({ role: 'model', parts });

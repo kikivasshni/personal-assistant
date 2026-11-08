@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
-import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Button, Card, Screen, Section, Segmented } from '@/components/ui';
 import { Icon3D } from '@/components/Icon3D';
 import { RichText } from '@/components/RichText';
@@ -12,7 +13,7 @@ export default function SongScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [song, setSong] = useState<Song | null>(null);
   const load = useCallback(async () => setSong(await getSong(Number(id))), [id]);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load);
 
   if (!song) return <Screen>{null}</Screen>;
   const ask = (q: string) => router.push(`/chat/hobby.guitar?prompt=${encodeURIComponent(q)}`);

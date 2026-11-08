@@ -1,4 +1,5 @@
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { cleanReply } from '@/lib/gemini';
 import { colors, fonts, palette, radius, space, type } from '@/theme';
 
 // Renders the light Markdown the coaches use: **bold**, bullets, numbers,
@@ -104,7 +105,7 @@ function Table({ rows }: { rows: string[][] }) {
 const looksLikeTab = (lines: string[]) => lines.filter((l) => /^\s*[eBGDAE]\s*\|/.test(l)).length >= 4;
 
 export function RichText({ text, color }: { text: string; color?: string }) {
-  const lines = text.replace(/\r/g, '').split('\n');
+  const lines = cleanReply(text).split('\n');
   const base = [type.body, color ? { color } : null];
   const out: React.ReactNode[] = [];
 
@@ -168,6 +169,7 @@ export function RichText({ text, color }: { text: string; color?: string }) {
       continue;
     }
     if ((m = line.match(/^>\s?(.*)/))) {
+      if (!m[1].trim()) continue;
       out.push(
         <Text key={i} style={[type.quote, { fontSize: 16 }]}>
           {m[1]}

@@ -1,5 +1,6 @@
 import { db, Fact, kvGet, kvSet, Message, startOfDay } from './db';
 import { generateJson } from './gemini';
+import { notifyChange } from './live';
 
 // Shared memory: durable facts every coach can see, plus each coach's
 // recent conversation. Retrieval is "recent + keyword match", which is plenty
@@ -20,6 +21,7 @@ export async function getProfile(): Promise<string> {
 
 export async function setProfile(text: string) {
   await kvSet('profile', text);
+  notifyChange('profile'); // syncs to the "Basics" row in Notion's profile
 }
 
 export async function addFact(text: string, coach?: string) {

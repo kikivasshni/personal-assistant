@@ -183,10 +183,24 @@ const MIGRATIONS: string[] = [
   UPDATE messages SET coach = 'manifest.desires' WHERE coach = 'manifest';
   UPDATE messages SET coach = 'finance.advisor' WHERE coach = 'finance';
   `,
+  // v3: two-way Notion sync. One row per synced record: which Notion page it
+  // is, and a fingerprint of the fields as last agreed by both sides.
+  // notion_id '' means "detached": deleted in Notion, kept in the app.
+  `
+  CREATE TABLE IF NOT EXISTS notion_links (
+    kind TEXT NOT NULL,
+    local_id INTEGER NOT NULL,
+    notion_id TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    PRIMARY KEY (kind, local_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_notion_links_page ON notion_links(notion_id);
+  `,
 ];
 
 async function open() {
-  const d = await SQLite.openDatabaseAsync('oracle.db');
+  // enableChangeListener powers live screens (src/lib/live.ts).
+  const d = await SQLite.openDatabaseAsync('oracle.db', { enableChangeListener: true });
   await d.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   const row = await d.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let version = row?.user_version ?? 0;
@@ -330,27 +344,62 @@ export function dayKey(d = new Date()): string {
 // Whole-database export for backups. Returns plain JSON.
 export async function exportAll(): Promise<Record<string, unknown[]>> {
   const d = await db();
-  const tables = [
-    'messages',
-    'facts',
-    'commitments',
-    'feed_items',
-    'food_log',
-    'transactions',
-    'merchant_rules',
-    'notes',
-    'moods',
-    'briefings',
-    'kv',
-    'custom_threads',
-    'desires',
-    'songs',
-    'practice_log',
-    'workouts',
-    'cycle_log',
-    'task_links',
-  ];
   const out: Record<string, unknown[]> = {};
-  for (const t of tables) out[t] = await d.getAllAsync(`SELECT * FROM ${t}`);
+  for (const t of BACKUP_TABLES) out[t] = await d.getAllAsync(`SELECT * FROM ${t}`);
   return out;
 }
+
+// Replaces every table in the backup with its rows, in one transaction: if
+// anything fails, nothing changes. Only columns that exist today are copied,
+// so a backup from an older or newer version of the app still restores.
+// Returns the number of rows restored.
+export async function restoreAll(data: Record<string, unknown>): Promise<number> {
+  const d = await db();
+  let rows = 0;
+  await d.execAsync('PRAGMA foreign_keys = OFF;');
+  try {
+    await d.withTransactionAsync(async () => {
+      for (const t of BACKUP_TABLES) {
+        const list = data[t];
+        if (!Array.isArray(list)) continue;
+        const cols = new Set((await d.getAllAsync<{ name: string }>(`PRAGMA table_info(${t})`)).map((c) => c.name));
+        if (!cols.size) continue;
+        await d.runAsync(`DELETE FROM ${t}`);
+        for (const row of list) {
+          if (!row || typeof row !== 'object') continue;
+          const entries = Object.entries(row as Record<string, unknown>).filter(([k]) => cols.has(k));
+          if (!entries.length) continue;
+          await d.runAsync(
+            `INSERT OR REPLACE INTO ${t} (${entries.map(([k]) => `"${k}"`).join(', ')}) VALUES (${entries.map(() => '?').join(', ')})`,
+            entries.map(([, v]) => (v === undefined ? null : (v as string | number | null))),
+          );
+          rows++;
+        }
+      }
+    });
+  } finally {
+    await d.execAsync('PRAGMA foreign_keys = ON;');
+  }
+  return rows;
+}
+
+const BACKUP_TABLES = [
+  'messages',
+  'facts',
+  'commitments',
+  'feed_items',
+  'food_log',
+  'transactions',
+  'merchant_rules',
+  'notes',
+  'moods',
+  'briefings',
+  'kv',
+  'custom_threads',
+  'desires',
+  'songs',
+  'practice_log',
+  'workouts',
+  'cycle_log',
+  'task_links',
+];

@@ -16,6 +16,7 @@ import { scheduleAffirmations } from '@/lib/desires';
 import { loadCustomThreads } from '@/lib/hobbies';
 import { setupNotifications } from '@/lib/nags';
 import { sweepMissed } from '@/lib/commitments';
+import { startNotionSync } from '@/lib/sync';
 import { handleNotificationResponse, registerNotificationTask } from '@/lib/notificationActions';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -49,6 +50,8 @@ export default function RootLayout() {
         await sweepMissed();
         await seedDefaults();
         scheduleAffirmations().catch(() => {});
+        // Keep Notion in step with everything in the app, both ways.
+        startNotionSync();
       })
       .catch(() => setDataReady(true));
     setupNotifications().catch(() => {});
@@ -87,6 +90,7 @@ export default function RootLayout() {
         <Stack.Screen name="chat/[id]" options={{ title: '' }} />
         <Stack.Screen name="space/[id]" options={{ title: '' }} />
         <Stack.Screen name="food" options={{ title: 'Food log' }} />
+        <Stack.Screen name="habits" options={{ title: 'Habits' }} />
         <Stack.Screen name="finance/index" options={{ title: 'Spending' }} />
         <Stack.Screen name="finance/statement" options={{ title: 'Statements' }} />
         <Stack.Screen name="notes/index" options={{ title: 'Study notes' }} />

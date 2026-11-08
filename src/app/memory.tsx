@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Button, Card, Empty, Field, Screen, Section } from '@/components/ui';
 import { resolve } from '@/data/spaces';
 import { Fact } from '@/lib/db';
@@ -13,11 +13,15 @@ export default function Memory() {
   const [saved, setSaved] = useState(false);
   const [newFact, setNewFact] = useState('');
 
+  // Facts update live (coaches add them mid-chat). The profile is a text box
+  // you edit, so it loads once and never gets overwritten while you type.
   const load = useCallback(async () => {
     setFacts(await allFacts());
-    setP(await getProfile());
   }, []);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load, { tables: ['facts'] });
+  useEffect(() => {
+    getProfile().then(setP);
+  }, []);
 
   return (
     <Screen>

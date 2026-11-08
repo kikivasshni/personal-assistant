@@ -40,7 +40,8 @@ export type ToolName =
   | 'log_practice'
   | 'save_song'
   | 'save_desire'
-  | 'find_clips';
+  | 'find_clips'
+  | 'log_habit';
 
 // Live panels shown at the top of a thread's chat.
 export type PanelKind = 'food' | 'move' | 'cycle' | 'study' | 'guitar' | 'practice' | 'desires' | 'advisor';
@@ -78,7 +79,7 @@ export type Space = {
   add?: { label: string; noun: string; panel: PanelKind };
 };
 
-const CORE: ToolName[] = ['create_commitment', 'complete_commitment', 'list_commitments', 'remember_fact'];
+const CORE: ToolName[] = ['create_commitment', 'complete_commitment', 'list_commitments', 'remember_fact', 'log_habit'];
 const TASKS: ToolName[] = ['add_task', 'list_tasks', 'complete_task'];
 const CAL: ToolName[] = ['add_calendar_event', 'list_calendar_events'];
 const NOTION: ToolName[] = ['notion_search', 'notion_read', 'notion_write', 'save_note'];

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Card, PageHeader, Screen } from '@/components/ui';
 import { Icon3D } from '@/components/Icon3D';
 import { SPACES, threadsFor } from '@/data/spaces';
@@ -50,11 +50,8 @@ async function statusLines(): Promise<Record<string, string>> {
 export default function Life() {
   const [status, setStatus] = useState<Record<string, string>>({});
 
-  useFocusEffect(
-    useCallback(() => {
-      statusLines().then(setStatus).catch(() => {});
-    }, []),
-  );
+  const load = useCallback(() => statusLines().then(setStatus).catch(() => {}), []);
+  useLive(load, { ignore: ['messages'] });
 
   const [hq, ...rest] = SPACES;
 

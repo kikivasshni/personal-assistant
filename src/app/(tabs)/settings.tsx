@@ -3,12 +3,13 @@ import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Field, PageHeader, Screen, Section } from '@/components/ui';
-import { shareBackup } from '@/lib/backup';
+import { lastRestoreAt, pickBackup, restoreBackup, shareBackup, undoRestore } from '@/lib/backup';
 import { kvGet, kvSet } from '@/lib/db';
 import { generateText } from '@/lib/gemini';
 import { connect, disconnect, GOOGLE, googleScheme, isConnected, MICROSOFT, Provider } from '@/lib/integrations/oauth';
 import { NotionNode, testNotion, workspaceMap } from '@/lib/integrations/notion';
 import { NotionPicker } from '@/components/NotionPicker';
+import { NotionSyncStatus } from '@/components/NotionSyncStatus';
 import { connectHealth, healthAvailable, healthConnected, openHealthSettings } from '@/lib/health';
 import { notionTasksDb } from '@/lib/tasks';
 import { financeNotionParent, setFinanceNotionParent } from '@/lib/finance';
@@ -125,6 +126,66 @@ export default function Settings() {
   const [picker, setPicker] = useState<'tasks' | 'finance' | null>(null);
   const [health, setHealth] = useState<'unavailable' | 'off' | 'on'>('off');
   const [lastBackup, setLastBackup] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [restoredAt, setRestoredAt] = useState<Date | null>(() => lastRestoreAt());
+
+  const importBackup = async () => {
+    try {
+      const picked = await pickBackup();
+      if (!picked) return;
+      const when = new Date(picked.backup.exported_at).toLocaleString();
+      Alert.alert(
+        'Restore this backup?',
+        `${picked.name}\nSaved ${when} · ${picked.rows} items\n\nEverything currently in Kairos (chats, desires, notes, logs) will be replaced with this backup. Your API keys and sign-ins stay as they are.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Restore',
+            style: 'destructive',
+            onPress: async () => {
+              setRestoring(true);
+              try {
+                const n = await restoreBackup(picked.backup);
+                setRestoredAt(new Date());
+                Alert.alert('Restored', `${n} items brought back from ${when}.`);
+              } catch (e) {
+                Alert.alert("Couldn't restore", `Nothing was changed. ${e instanceof Error ? e.message : String(e)}`);
+              } finally {
+                setRestoring(false);
+              }
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      Alert.alert("Couldn't open backup", e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const confirmUndo = () =>
+    Alert.alert(
+      'Undo the last restore?',
+      `This puts back what was in Kairos just before you restored on ${restoredAt?.toLocaleString() ?? 'that day'}. Anything added since then will be lost.`,
+      [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Undo',
+        style: 'destructive',
+        onPress: async () => {
+          setRestoring(true);
+          try {
+            await undoRestore();
+            setRestoredAt(null);
+            Alert.alert('Done', 'Your data is back to how it was before the restore.');
+          } catch (e) {
+            Alert.alert("Couldn't undo", e instanceof Error ? e.message : String(e));
+          } finally {
+            setRestoring(false);
+          }
+        },
+      },
+      ],
+    );
 
   useFocusEffect(
     useCallback(() => {
@@ -281,6 +342,7 @@ export default function Settings() {
             }}
           />
           {notionMsg && <Text style={type.small}>{notionMsg}</Text>}
+          <NotionSyncStatus />
           <Row label="Tasks database" value={targets.tasks ?? 'None found'} onPress={() => setPicker('tasks')} />
           <Row label="Finance reports under" value={targets.finance ?? 'None found'} onPress={() => setPicker('finance')} />
           <NotionPicker
@@ -343,6 +405,16 @@ export default function Settings() {
           <Text style={type.bodySoft}>Everything lives on this phone. Export a copy now and then and save it to Google Drive.</Text>
           <Button title="Export backup" variant="soft" icon="cloud-download-outline" onPress={() => shareBackup().then(() => setLastBackup(new Date().toLocaleString()))} />
           <Text style={type.small}>{lastBackup ? `Last backup: ${lastBackup}` : 'No backup yet.'}</Text>
+          <Button title="Import backup" variant="ghost" icon="cloud-upload-outline" loading={restoring} onPress={importBackup} />
+          {restoredAt && (
+            <Button
+              title={`Undo restore from ${restoredAt.toLocaleDateString([], { day: 'numeric', month: 'short' })}`}
+              variant="ghost"
+              icon="arrow-undo-outline"
+              disabled={restoring}
+              onPress={confirmUndo}
+            />
+          )}
         </Card>
       </Section>
 

@@ -1,6 +1,5 @@
 import { db, Food, startOfDay } from './db';
 import { generateJson, userWithFile } from './gemini';
-import { logFoodToNotion } from './integrations/secondBrain';
 
 export type MealEstimate = {
   description: string;
@@ -42,18 +41,7 @@ export async function saveMeal(m: MealEstimate, photoUri?: string) {
     photoUri ?? null,
     Date.now(),
   );
-  logFoodToNotion({
-    name: m.description,
-    day: new Date().toLocaleDateString('en-CA'),
-    kcal: m.kcal,
-    protein: m.protein,
-    carbs: m.carbs,
-    fat: m.fat,
-    fibre: m.fibre,
-    items: m.items?.map((i) => `${i.name} (${i.portion})`).join(', '),
-    note: m.note,
-    source: 'photo',
-  }).catch(() => {});
+  // Notion's food & health log is kept in step by the sync (src/lib/sync).
 }
 
 export async function mealsToday(): Promise<Food[]> {

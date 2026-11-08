@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Card, PageHeader, Pill, Screen, Section, Segmented, Sheet } from '@/components/ui';
+import { HabitsCard } from '@/components/HabitsCard';
 import { Icon3D } from '@/components/Icon3D';
 import { resolve } from '@/data/spaces';
 import { Briefing, cachedBriefing, makeBriefing } from '@/lib/briefing';
@@ -95,12 +97,14 @@ export default function Today() {
     }
   }, []);
 
+  // Reloads on focus and whenever data changes (chat messages excluded: they
+  // don't affect Today, and the load also calls Notion, Google and Health).
+  useLive(load, { ignore: ['messages'] });
   useFocusEffect(
     useCallback(() => {
-      load();
       ensurePermission().catch(() => {});
       if (params.briefing) runBriefing(false);
-    }, [load, params.briefing, runBriefing]),
+    }, [params.briefing, runBriefing]),
   );
 
   const refresh = async () => {
@@ -235,6 +239,8 @@ export default function Today() {
           )}
         </Card>
       </Section>
+
+      <HabitsCard />
 
       <Section
         title="To-do"

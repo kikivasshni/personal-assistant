@@ -1,7 +1,7 @@
 import { addDays, db, dayKey, kvGet, kvSet, Txn } from './db';
 import { generateJson, generateText, userWithFile } from './gemini';
 import { ensurePage, replacePage, workspaceMap } from './integrations/notion';
-import { budgets, pushToLedger } from './integrations/secondBrain';
+import { budgets } from './integrations/secondBrain';
 
 export const CATEGORIES = [
   'Food & drinks',
@@ -298,9 +298,7 @@ export async function syncFinanceToNotion(): Promise<string> {
     '## This year by category',
     table(['Category', 'SGD'], s.categories.year.map((c) => [c.category, money(c.total)])),
   ].join('\n\n');
-  // Categorised transactions also go into the financial ledger database.
-  const all = await (await db()).getAllAsync<Txn>('SELECT * FROM transactions WHERE needs_review = 0 ORDER BY date');
-  await pushToLedger(all).catch(() => 0);
+  // Individual transactions reach the financial ledger through the sync.
   const overview = await ensurePage(parent, 'Spending overview');
   await replacePage(overview.id, md);
 

@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLive } from '@/lib/live';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { Button, Card, Empty, Field, Screen, Section } from '@/components/ui';
@@ -19,13 +20,16 @@ export default function NotesScreen() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const firstLoad = useRef(true);
   const load = useCallback(async () => {
     setNotes(await allNotes());
     const ok = !!(await getSecret('notionToken'));
     setHasNotion(ok);
-    if (ok) setToNotion(true);
+    // Default to saving in Notion once; don't re-tick it if you untick it.
+    if (ok && firstLoad.current) setToNotion(true);
+    firstLoad.current = false;
   }, []);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load);
 
   const pick = async () => {
     const r = await DocumentPicker.getDocumentAsync({

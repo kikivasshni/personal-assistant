@@ -489,6 +489,9 @@ export async function queryDbRows(schema: DbSchema, limit = 50): Promise<DbRow[]
 export async function testNotion(): Promise<string> {
   const me = (await call('/users/me')) as { name?: string; bot?: { workspace_name?: string } };
   const nodes = await refreshMap();
+  if (!nodes.length) {
+    return `Connected to ${me.bot?.workspace_name ?? 'Notion'}, but the integration can't see any pages yet. In Notion, open your top-level page (e.g. "second brain"), tap ••• → Connections, add this integration and allow its sub-pages, then scan again.`;
+  }
   return `${me.bot?.workspace_name ?? me.name ?? 'Notion'}: ${nodes.filter((n) => n.kind === 'page').length} pages and ${
     nodes.filter((n) => n.kind === 'database').length
   } databases visible`;

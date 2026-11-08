@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Bar, Button, Card, Empty, Screen, Section, Segmented } from '@/components/ui';
 import { Icon3D } from '@/components/Icon3D';
 import { NotionPicker } from '@/components/NotionPicker';
@@ -24,7 +25,7 @@ export default function Spending() {
     setS(await spendSummary());
     setLastSync(await kvGet('finance_notion_synced'));
   }, []);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load);
 
   const sync = async () => {
     setSyncing(true);

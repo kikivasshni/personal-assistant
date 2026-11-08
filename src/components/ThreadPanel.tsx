@@ -6,6 +6,7 @@ import type { Resolved } from '@/data/spaces';
 import { addDays, dayKey, Desire, kvGet, kvSet, parseDayKey, Song, Workout } from '@/lib/db';
 import { DayAffirmations, listDesires, todaysAffirmations } from '@/lib/desires';
 import { spendSummary } from '@/lib/finance';
+import { useLive } from '@/lib/live';
 import { mealsToday, totals } from '@/lib/food';
 import { connectHealth, cycleInfo, CycleInfo, HealthSnapshot, logPeriodDay, recentWorkouts, snapshot } from '@/lib/health';
 import { listSongs, logPractice, practiceStats, PracticeStats } from '@/lib/hobbies';
@@ -28,16 +29,17 @@ export function ThreadPanel({ t, refreshKey, hidden }: { t: Resolved; refreshKey
     kvGet(`panel_open:${t.id}`).then((v) => setOpen(v !== '0'));
   }, [t.id]);
 
-  useEffect(() => {
-    let live = true;
-    build(t, reload)
-      .then((p) => live && setPanel(p))
-      .catch(() => live && setPanel(null));
-    return () => {
-      live = false;
-    };
+  // Rebuilds when the reply finishes (refreshKey), when the panel asks
+  // (tick), and live whenever a coach's tool writes data mid-reply.
+  const load = useCallback(async () => {
+    try {
+      setPanel(await build(t, reload));
+    } catch {
+      setPanel(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t.id, refreshKey, tick, reload]);
+  useLive(load, { focus: false, ignore: ['messages'] });
 
   if (!panel || hidden) return null;
   const toggle = () => {

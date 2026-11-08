@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Empty, Screen, Section, Segmented, Sheet } from '@/components/ui';
 import { Icon3D } from '@/components/Icon3D';
@@ -18,7 +19,7 @@ export default function Songs() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [adding, setAdding] = useState(false);
   const load = useCallback(async () => setSongs(await listSongs()), []);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load);
 
   return (
     <Screen>

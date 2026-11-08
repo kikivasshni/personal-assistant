@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLive } from '@/lib/live';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Empty, Screen, Section, Stat } from '@/components/ui';
@@ -23,7 +24,7 @@ export default function FoodScreen() {
     setToday(await mealsToday());
     setHistory(await recentMeals(20));
   }, []);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load);
 
   const pick = async (camera: boolean) => {
     const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], base64: true, quality: 0.5 };

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { Ionicons } from '@expo/vector-icons';
 import { Bar, Button, Card, Screen, Section, Sheet } from '@/components/ui';
 import { Icon3D } from '@/components/Icon3D';
@@ -19,7 +20,7 @@ export default function MoodCalendar() {
   const [editing, setEditing] = useState<string | null>(null);
 
   const load = useCallback(async () => setMoods(await moodsForMonth(cursor.y, cursor.m)), [cursor]);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load);
 
   const shift = (n: number) => setCursor((c) => {
     const d = new Date(c.y, c.m + n, 1);

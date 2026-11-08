@@ -4,11 +4,12 @@ import { db, dayKey, kvGet, kvSet } from './db';
 import { saveDesire } from './desires';
 import { searchClips } from './feed';
 import { FunctionDeclaration } from './gemini';
+import { loadHabits, matchHabit, setHabit, streak } from './habits';
 import { cycleInfo, logPeriodDay, logSymptom, logWorkout, snapshot } from './health';
 import { logPractice, saveSong } from './hobbies';
 import { addEvent, eventTime, listEvents } from './integrations/google';
 import { appendToPage, createPage, readPage, search } from './integrations/notion';
-import { logFoodToNotion, logTrainingToNotion, saveNote } from './integrations/secondBrain';
+import { saveNote } from './integrations/secondBrain';
 import { addFact } from './memory';
 import { addTask, listTasks, setTaskDone } from './tasks';
 
@@ -142,6 +143,20 @@ export const DECLARATIONS: Record<ToolName, FunctionDeclaration> = {
         note: S('One-line PCOS/insulin comment'),
       },
       required: ['description', 'kcal', 'protein', 'carbs', 'fat'],
+    },
+  },
+  log_habit: {
+    name: 'log_habit',
+    description:
+      "Tick (or untick) a habit in kirthi's Notion habit tracker when they say they did it, e.g. drank their water, went for a run, skipped sugar. The habit names are listed in your context under 'Habits today'.",
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        habit: S('The habit, as named in the tracker (close wording is matched)'),
+        done: { type: 'BOOLEAN', description: 'true to tick (default), false to untick' },
+        day: S('Optional YYYY-MM-DD if not today'),
+      },
+      required: ['habit'],
     },
   },
   log_workout: {
@@ -332,24 +347,26 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
           opt('note'),
           Date.now(),
         );
-        logFoodToNotion({
-          name: s('description'),
-          day: dayKey(),
-          kcal: n('kcal'),
-          protein: n('protein'),
-          carbs: n('carbs'),
-          fat: n('fat'),
-          fibre: n('fibre'),
-          note: opt('note'),
-          source: 'text',
-        }).catch(() => {});
         return { result: { ok: true }, note: `Logged: ${s('description')}` };
       }
       case 'log_workout': {
         const day = opt('day');
+        // The sync copies it to Notion's training log.
         await logWorkout(s('title'), n('minutes'), opt('details'), day ? parseLocal(`${day}T12:00:00`) : Date.now());
-        logTrainingToNotion({ title: s('title'), day: day ?? dayKey(), minutes: n('minutes'), distanceKm: n('distance_km'), notes: opt('details') }).catch(() => {});
         return { result: { ok: true }, note: `Workout logged: ${s('title')}` };
+      }
+      case 'log_habit': {
+        const state = await loadHabits(5 * 60_000);
+        if (!state) return { result: { ok: false, error: 'No habit tracker database is shared with Kairos in Notion.' } };
+        const habit = matchHabit(state.habits, s('habit'));
+        if (!habit) return { result: { ok: false, error: `No habit like "${s('habit')}". Habits: ${state.habits.join(', ')}.` } };
+        const done = args.done !== false;
+        const day = opt('day') ?? dayKey();
+        const after = await setHabit(habit, done, day);
+        return {
+          result: { ok: true, habit, done, streak: streak(after, habit) },
+          note: done ? `Habit ticked: ${habit}` : `Habit unticked: ${habit}`,
+        };
       }
       case 'log_cycle': {
         const day = opt('day') ?? dayKey();

@@ -2,6 +2,7 @@ import { addDays, db, dayKey, kvGet, kvSet } from './db';
 import { addTodo, listTodos, setTodoDone, setTodoDue, TodoTask } from './integrations/microsoft';
 import { DbSchema, databaseSchema, queryDbRows, upsertDbRow, workspaceMap } from './integrations/notion';
 import { isConnected, MICROSOFT } from './integrations/oauth';
+import { notifyChange } from './live';
 
 // Tasks: Microsoft To Do is the hub (Samsung Reminder syncs with it), and a
 // Notion tasks database is kept in step both ways. Commitments are separate:
@@ -63,6 +64,7 @@ export function groupTasks(tasks: Task[]): TaskGroups {
 
 export async function addTask(title: string, dueDay?: string | null, remindAtIso?: string | null): Promise<Task> {
   const t = fromTodo(await addTodo(title, dueDay, remindAtIso));
+  notifyChange('tasks');
   mirror(t).catch(() => {});
   return t;
 }
@@ -70,11 +72,13 @@ export async function addTask(title: string, dueDay?: string | null, remindAtIso
 export async function setTaskDone(t: Task, done: boolean) {
   await setTodoDone(t.id, done);
   await rememberDone(t, done);
+  notifyChange('tasks');
   mirror({ ...t, done }).catch(() => {});
 }
 
 export async function moveTask(t: Task, dueDay: string | null) {
   await setTodoDue(t.id, dueDay);
+  notifyChange('tasks');
   mirror({ ...t, due: dueDay }).catch(() => {});
 }
 
@@ -135,6 +139,9 @@ async function syncNotion(open: Task[]) {
     }
   }
   const linkedNotion = new Set(links.map((l) => l.notion_id));
+  // Commitments are mirrored into the same Notion database; they're not To Do tasks.
+  for (const c of await d.getAllAsync<{ notion_id: string }>("SELECT notion_id FROM notion_links WHERE kind = 'commitments'"))
+    linkedNotion.add(c.notion_id);
   const since = Date.now() - 14 * 86_400_000;
   for (const row of await queryDbRows(s)) {
     if (row.done || linkedNotion.has(row.id) || row.edited < since || !row.title) continue;

@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLive } from '@/lib/live';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Button, Card, Field, Screen, Section, Sheet } from '@/components/ui';
@@ -23,19 +24,25 @@ export default function Desires() {
   const [celebrating, setCelebrating] = useState<Desire | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Desires and today's affirmation update live: a coach can save a desire
+  // mid-chat, and new affirmations are written in the background after you
+  // add one. The time fields load once so they're never reset while editing.
   const load = useCallback(async () => {
     setList(await listDesires());
     setAff(await todaysAffirmations());
-    setTimes(await getAffirmationTimes());
   }, []);
-  useFocusEffect(useCallback(() => void load(), [load]));
+  useLive(load, { tables: ['desires', 'kv'] });
+  useEffect(() => {
+    getAffirmationTimes().then(setTimes);
+  }, []);
 
   const refreshAffirmations = async () => {
     setBusy(true);
     try {
+      if (!list.some((d) => d.status === 'pending')) throw new Error('Add a desire first. Affirmations are written from the desires you’re assuming.');
       if (!(await ensurePermission())) throw new Error('Allow notifications for Kairos first.');
       const n = await scheduleAffirmations(true, times);
-      Alert.alert('Affirmations set', n ? `${n} morning and night affirmations scheduled for the next 7 days.` : 'Add a desire first.');
+      Alert.alert('Affirmations set', `${n} morning and night affirmations scheduled for the next 7 days.`);
       load();
     } catch (e) {
       Alert.alert("Couldn't schedule", e instanceof Error ? e.message : String(e));
