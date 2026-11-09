@@ -103,7 +103,7 @@ export default function Desires() {
                 <Text style={[styles.actionText, { color: palette.lilacDeep }]}>Scene for tonight</Text>
               </Pressable>
               <Pressable style={[styles.action, { backgroundColor: palette.butter }]} onPress={() => setCelebrating(d)}>
-                <Text style={[styles.actionText, { color: palette.butterDeep }]}>It manifested ✨</Text>
+                <Text style={[styles.actionText, { color: palette.butterDeep }]}>It manifested</Text>
               </Pressable>
             </View>
           </Card>

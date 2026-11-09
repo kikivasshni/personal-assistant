@@ -65,9 +65,10 @@ export function ThreadPanel({ t, refreshKey, hidden }: { t: Resolved; refreshKey
   );
 }
 
-function Chip({ label, onPress, color }: { label: string; onPress: () => void; color: string }) {
+function Chip({ label, onPress, color, icon }: { label: string; onPress: () => void; color: string; icon?: keyof typeof Ionicons.glyphMap }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, { borderColor: color + '55' }]}>
+    <Pressable onPress={onPress} style={[styles.chip, styles.chipInner, { borderColor: color + '55' }]}>
+      {icon && <Ionicons name={icon} size={15} color={color} />}
       <Text style={[styles.chipText, { color }]}>{label}</Text>
     </Pressable>
   );
@@ -110,7 +111,7 @@ async function build(t: Resolved, reload: () => void): Promise<Panel | null> {
               </Text>
             ))}
             <View style={styles.row}>
-              <Chip label="📷 Snap a meal" color={t.deep} onPress={() => router.push('/food')} />
+              <Chip label="Snap a meal" icon="camera-outline" color={t.deep} onPress={() => router.push('/food')} />
             </View>
           </>
         ),
@@ -146,7 +147,7 @@ async function build(t: Resolved, reload: () => void): Promise<Panel | null> {
       const [exam, p] = await Promise.all([kvGet(`exam:${t.id}`), practiceStats(t.id)]);
       const days = exam ? Math.ceil((Date.parse(exam) - Date.now()) / 86_400_000) : null;
       return {
-        summary: [days != null && days >= 0 ? `${days} days to exam` : 'Set your exam date', `${p.week} min this week`, p.streak ? `🔥 ${p.streak}` : null]
+        summary: [days != null && days >= 0 ? `${days} days to exam` : 'Set your exam date', `${p.week} min this week`, p.streak ? `${p.streak}-day streak` : null]
           .filter(Boolean)
           .join(' · '),
         body: <StudyBody t={t} exam={exam} p={p} onChange={reload} />,
@@ -382,6 +383,7 @@ const styles = StyleSheet.create({
   summaryText: { flex: 1, fontFamily: fonts.bodyHeavy, fontSize: 13 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#FFFFFFCC' },
+  chipInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 13 },
   mini: { flex: 1, minWidth: 64, backgroundColor: colors.surfaceSoft, borderRadius: radius.sm, paddingVertical: 8, paddingHorizontal: 10 },
   miniValue: { fontFamily: fonts.display, fontSize: 18, color: colors.text },

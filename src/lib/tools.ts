@@ -130,10 +130,12 @@ export const DECLARATIONS: Record<ToolName, FunctionDeclaration> = {
   },
   log_food: {
     name: 'log_food',
-    description: 'Log a meal kirthi describes in words, with your macro estimate.',
+    description:
+      "Log a meal kirthi describes in words, with your macro estimate. If they're correcting or adding to a meal already logged today (e.g. 'you forgot the fries'), pass that meal's id as replaces_id with the full corrected meal, so it isn't counted twice.",
     parameters: {
       type: 'OBJECT',
       properties: {
+        replaces_id: N("Id of today's logged meal this corrects (shown as [meal N] in context). Leave out for a new meal."),
         description: S('What they ate'),
         kcal: N('Calories'),
         protein: N('Protein grams'),
@@ -336,7 +338,24 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
         return { result: { ok: true, url: r.url, created: r.created }, note: `${r.created ? 'New note' : 'Added to'} “${s('title')}” in ${r.notebook}` };
       }
       case 'log_food': {
-        await (await db()).runAsync(
+        const d = await db();
+        const replaces = n('replaces_id');
+        if (replaces != null) {
+          // A correction: update the meal in place (the sync updates Notion too).
+          const r = await d.runAsync(
+            'UPDATE food_log SET description = ?, kcal = ?, protein = ?, carbs = ?, fat = ?, fibre = ?, note = ? WHERE id = ?',
+            s('description'),
+            n('kcal'),
+            n('protein'),
+            n('carbs'),
+            n('fat'),
+            n('fibre'),
+            opt('note'),
+            replaces,
+          );
+          if (r.changes) return { result: { ok: true, updated: replaces }, note: `Updated: ${s('description')}` };
+        }
+        await d.runAsync(
           'INSERT INTO food_log(description, kcal, protein, carbs, fat, fibre, note, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
           s('description'),
           n('kcal'),
@@ -412,7 +431,7 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
         });
         return {
           result: { ok: true, id: d.id },
-          note: d.status === 'manifested' ? `Manifested: ${d.title} ✨` : `Desire saved: ${d.title}`,
+          note: d.status === 'manifested' ? `Manifested: ${d.title}` : `Desire saved: ${d.title}`,
         };
       }
       case 'find_clips': {

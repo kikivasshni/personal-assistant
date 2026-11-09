@@ -109,7 +109,7 @@ export default function Habits() {
               <View key={h} style={[styles.streakRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <Text style={[type.body, { flex: 1 }]}>{h}</Text>
                 <Text style={type.small}>{last14}/14</Text>
-                <Text style={styles.streak}>{s ? `🔥 ${s}` : '–'}</Text>
+                <Text style={styles.streak}>{s ? <><Ionicons name="flame" size={12} color={colors.textSoft} /> {s}</> : '–'}</Text>
               </View>
             );
           })}

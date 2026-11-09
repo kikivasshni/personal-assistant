@@ -73,7 +73,7 @@ export function HabitsCard() {
             <Pressable key={h} onPress={() => toggle(h)} style={[styles.item, i > 0 && styles.border]}>
               <View style={[styles.check, done && styles.checked]}>{done && <Ionicons name="checkmark" size={16} color="#fff" />}</View>
               <Text style={[type.body, { flex: 1 }, done && styles.doneText]}>{h}</Text>
-              {s >= 2 && <Text style={styles.streak}>🔥 {s}</Text>}
+              {s >= 2 && <Text style={styles.streak}><Ionicons name="flame" size={12} color={colors.textSoft} /> {s}</Text>}
             </Pressable>
           );
         })}

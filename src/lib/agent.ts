@@ -39,14 +39,14 @@ async function cardContext(t: Resolved): Promise<string> {
   const out: string[] = [];
   switch (t.panel) {
     case 'food': {
-      const meals = await d.getAllAsync<{ description: string; kcal: number; protein: number; carbs: number; created_at: number }>(
-        'SELECT description, kcal, protein, carbs, created_at FROM food_log WHERE created_at >= ? ORDER BY created_at',
+      const meals = await d.getAllAsync<{ id: number; description: string; kcal: number; protein: number; carbs: number; created_at: number }>(
+        'SELECT id, description, kcal, protein, carbs, created_at FROM food_log WHERE created_at >= ? ORDER BY created_at',
         startOfDay() - 6 * 86_400_000,
       );
       const today = meals.filter((m) => m.created_at >= startOfDay());
       out.push(
         today.length
-          ? `Eaten today: ${today.map((m) => `${m.description} (${Math.round(m.kcal ?? 0)} kcal, ${Math.round(m.protein ?? 0)} g protein, ${Math.round(m.carbs ?? 0)} g carbs)`).join('; ')}.`
+          ? `Eaten today: ${today.map((m) => `[meal ${m.id}] ${m.description} (${Math.round(m.kcal ?? 0)} kcal, ${Math.round(m.protein ?? 0)} g protein, ${Math.round(m.carbs ?? 0)} g carbs)`).join('; ')}.`
           : 'Nothing logged today yet.',
       );
       if (meals.length > today.length)
