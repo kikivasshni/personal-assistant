@@ -228,16 +228,45 @@ export async function sendMessage(threadId: string, text: string, attachment?: A
   const t = resolve(threadId);
   const past = (await history(t.id, 16)).filter((m) => m.role !== 'note');
   const userMsgId = await save(t.id, 'user', attachment ? `[Photo] ${text}` : text);
+  const turn: Turn = { wrote: false };
   try {
-    await converse(t, text, past, userMsgId, attachment, cb);
+    await converse(t, text, past, userMsgId, attachment, cb, turn);
   } catch (e) {
-    // Drop the unanswered message so Retry doesn't duplicate it.
+    if (turn.wrote) {
+      // Something was already saved (a meal, a task...). Keep the message so
+      // Retry isn't offered: retrying would save it all a second time.
+      await save(t.id, 'model', "I saved that, but lost the connection before I could reply. Ask me again if you want my take.");
+      return;
+    }
+    // Nothing happened yet: drop the unanswered message so Retry doesn't duplicate it.
     await (await db()).runAsync('DELETE FROM messages WHERE id = ?', userMsgId);
     throw e;
   }
 }
 
-async function converse(t: Resolved, text: string, past: Message[], _userMsgId: number, attachment: Attachment | undefined, cb: SendCallbacks) {
+type Turn = { wrote: boolean };
+
+// Tools that only read. Anything else changes something, so it runs at most
+// once per identical call in a turn.
+const READ_ONLY = new Set([
+  'list_commitments',
+  'list_tasks',
+  'list_calendar_events',
+  'notion_search',
+  'notion_read',
+  'health_data',
+]);
+
+async function converse(
+  t: Resolved,
+  text: string,
+  past: Message[],
+  _userMsgId: number,
+  attachment: Attachment | undefined,
+  cb: SendCallbacks,
+  turn: Turn,
+) {
+  const done = new Map<string, Record<string, unknown>>();
 
   const contents: GeminiContent[] = past.map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
   const userParts: GeminiPart[] = [];
@@ -268,7 +297,19 @@ async function converse(t: Resolved, text: string, past: Message[], _userMsgId: 
     for (const p of calls) {
       const call = p.functionCall!;
       cb.onStatus?.(TOOL_STATUS[call.name] ?? 'Working on it');
+      const key = `${call.name}:${JSON.stringify(call.args ?? {})}`;
+      const writes = !READ_ONLY.has(call.name);
+      const prev = writes ? done.get(key) : undefined;
+      if (prev) {
+        // The model asked for the exact same write again: don't repeat it.
+        responses.push({ functionResponse: { name: call.name, response: { ...prev, already_done: true } } });
+        continue;
+      }
       const out = await runTool(call.name, call.args ?? {}, t);
+      if (writes) {
+        done.set(key, out.result);
+        if (out.result.ok) turn.wrote = true;
+      }
       if (out.note) await save(t.id, 'note', out.note);
       responses.push({ functionResponse: { name: call.name, response: out.result } });
     }

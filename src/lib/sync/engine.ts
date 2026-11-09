@@ -110,6 +110,16 @@ async function scan(dbId: string): Promise<{ pages: Page[]; complete: boolean }>
 
 const clean = (id: string) => id.replace(/-/g, '');
 
+async function stillThere(pageId: string): Promise<boolean> {
+  try {
+    const p = (await call(`/pages/${pageId}`)) as { archived?: boolean; in_trash?: boolean };
+    return !p.archived && !p.in_trash;
+  } catch (e) {
+    // Only a clear "not found" counts as gone; a network blip shouldn't delete anything.
+    return !/Notion 404/.test(e instanceof Error ? e.message : String(e));
+  }
+}
+
 // ---------- the sync ----------
 
 export type SyncResult = { kind: string; pushed: number; pulled: number; created: number; imported: number; deleted: number; skipped?: string };
@@ -179,6 +189,10 @@ export async function syncMirror(m: Mirror, nodes: NotionNode[]): Promise<SyncRe
       }
     } else if (row && !page) {
       if (!safeToDelete) continue;
+      // A page created moments ago may not show in the database query yet.
+      // Check it directly before treating it as deleted, or it gets detached
+      // and later imported back as a second copy.
+      if (await stillThere(link.notion_id)) continue;
       if (m.deleteLocal) {
         await m.deleteLocal(row.id); // deleted in Notion
         await dropLink(row.id);

@@ -270,6 +270,11 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
     switch (name as ToolName) {
       case 'create_commitment': {
         const due = parseLocal(s('due_iso'));
+        // Same commitment already open at about the same time: don't double the nags.
+        const same = (await openCommitments()).find(
+          (x) => x.title.trim().toLowerCase() === s('title').trim().toLowerCase() && Math.abs(x.due_at - due) < 30 * 60_000,
+        );
+        if (same) return { result: { ok: true, id: same.id, already_existed: true } };
         const cm = await createCommitment(t.id, s('title'), due);
         return {
           result: { ok: true, id: cm.id },
@@ -290,6 +295,10 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
         return { result: { ok: true }, note: 'Saved to memory' };
       }
       case 'add_task': {
+        const existing = (await listTasks()).find(
+          (x) => !x.done && x.title.trim().toLowerCase() === s('title').trim().toLowerCase() && (x.due ?? null) === (opt('due_day')?.slice(0, 10) ?? null),
+        );
+        if (existing) return { result: { ok: true, id: existing.id, already_existed: true } };
         const task = await addTask(s('title'), opt('due_day'), opt('remind_at_iso'));
         return { result: { ok: true, id: task.id }, note: `Added to your tasks: ${task.title}` };
       }
@@ -304,6 +313,14 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
         return { result: { ok: true }, note: `Ticked off: ${task.title}` };
       }
       case 'add_calendar_event': {
+        const startMs = parseLocal(s('start_iso'));
+        const clash = (await listEvents(1, new Date(startMs)).catch(() => [])).find(
+          (e) =>
+            (e.summary ?? '').trim().toLowerCase() === s('title').trim().toLowerCase() &&
+            e.start?.dateTime != null &&
+            Math.abs(Date.parse(e.start.dateTime) - startMs) < 5 * 60_000,
+        );
+        if (clash) return { result: { ok: true, id: clash.id, already_existed: true } };
         const e = await addEvent(s('title'), s('start_iso'), s('end_iso'), opt('description') ?? undefined);
         return { result: { ok: true, id: e.id }, note: `Added to calendar: ${s('title')}` };
       }
@@ -339,7 +356,15 @@ export async function runTool(name: string, args: Record<string, unknown>, t: Re
       }
       case 'log_food': {
         const d = await db();
-        const replaces = n('replaces_id');
+        let replaces = n('replaces_id');
+        if (replaces == null) {
+          const recent = await d.getFirstAsync<{ id: number }>(
+            'SELECT id FROM food_log WHERE lower(description) = lower(?) AND created_at > ?',
+            s('description'),
+            Date.now() - 15 * 60_000,
+          );
+          replaces = recent?.id ?? null;
+        }
         if (replaces != null) {
           // A correction: update the meal in place (the sync updates Notion too).
           const r = await d.runAsync(

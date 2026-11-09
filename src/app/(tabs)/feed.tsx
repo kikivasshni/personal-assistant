@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -30,9 +30,9 @@ import { useLive } from '@/lib/live';
 import { colors, fonts, radius, space, type } from '@/theme';
 
 // A goal-tuned feed that plays like Shorts: full screen, autoplay, swipe up
-// for the next clip. It has a hard stop: after SESSION_CAP clips it shows
-// your next commitment instead of more videos.
-const SESSION_CAP = 10;
+// for the next clip. After SESSION_CAP clips it suggests your next
+// commitment; "Keep watching" carries on.
+const SESSION_CAP = 30;
 
 // Clips within this many places of the one on screen keep a loaded (paused)
 // player, so the next swipe starts instantly.
@@ -47,6 +47,9 @@ export default function Feed() {
   const [height, setHeight] = useState(0);
   const [active, setActive] = useState(0);
   const [seenThisSession, setSeen] = useState(0);
+  const [capAt, setCapAt] = useState(SESSION_CAP);
+  // Clips already counted this session, so re-renders don't count them again.
+  const counted = useRef(new Set<number>());
   const [refreshing, setRefreshing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -54,9 +57,22 @@ export default function Feed() {
   const [focused, setFocused] = useState(true);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
 
+  const loadedFilter = useRef<string | null>(null);
   const load = useCallback(
     async (f = filter) => {
-      setItems(await feedItems(f));
+      const fresh = await feedItems(f);
+      // Keep the order you're scrolling in. The query puts unseen clips
+      // first, so marking one seen used to move it, slide a new clip under
+      // you and mark that one seen too, which raced through the whole feed.
+      setItems((prev) => {
+        if (f !== loadedFilter.current) {
+          loadedFilter.current = f;
+          return fresh;
+        }
+        const pos = new Map(prev.map((p, i) => [p.id, i]));
+        const kept = fresh.filter((x) => pos.has(x.id)).sort((a, b) => pos.get(a.id)! - pos.get(b.id)!);
+        return [...kept, ...fresh.filter((x) => !pos.has(x.id))];
+      });
       setNext((await openCommitments())[0] ?? null);
     },
     [filter],
@@ -97,8 +113,10 @@ export default function Feed() {
     const first = viewableItems[0];
     if (first?.index != null) {
       setActive(first.index);
-      if (first.item?.id) {
-        markSeen(first.item.id);
+      const id = (first.item as FeedItem | undefined)?.id;
+      if (id != null && !counted.current.has(id)) {
+        counted.current.add(id);
+        markSeen(id);
         setSeen((n) => n + 1);
       }
     }
@@ -110,7 +128,7 @@ export default function Feed() {
     load(f);
   };
 
-  const capped = seenThisSession >= SESSION_CAP;
+  const capped = seenThisSession >= capAt;
   const data = capped ? items.slice(0, active + 1) : items;
 
   return (
@@ -148,7 +166,7 @@ export default function Feed() {
               capped ? (
                 <View style={[styles.stop, { height }]}>
                   <Ionicons name="flag" size={40} color="#fff" />
-                  <Text style={[styles.emptyTitle, { fontSize: 24 }]}>That’s {SESSION_CAP}. Now go live it.</Text>
+                  <Text style={[styles.emptyTitle, { fontSize: 24 }]}>That’s {seenThisSession} clips. Now go live it.</Text>
                   {next ? (
                     <>
                       <Text style={styles.emptyBody}>Next up: {next.title}</Text>
@@ -160,7 +178,7 @@ export default function Feed() {
                   ) : (
                     <Button title="Plan something with Planner" onPress={() => router.push('/chat/hq')} />
                   )}
-                  <Button title="Back to Today" variant="ghost" onPress={() => router.push('/')} />
+                  <Button title="Keep watching" variant="ghost" onPress={() => setCapAt(seenThisSession + SESSION_CAP)} />
                 </View>
               ) : undefined
             }

@@ -15,7 +15,7 @@ export function parseLink(url: string): { source: Source; embed: string | null; 
   if ((m = u.match(/(?:youtube\.com\/shorts\/|youtu\.be\/|youtube\.com\/watch\?v=)([\w-]{11})/)))
     return { source: 'youtube', id: m[1], embed: youtubeEmbed(m[1]) };
   if ((m = u.match(/tiktok\.com\/.*\/video\/(\d+)/)))
-    return { source: 'tiktok', id: m[1], embed: `https://www.tiktok.com/embed/v2/${m[1]}` };
+    return { source: 'tiktok', id: m[1], embed: `https://www.tiktok.com/player/v1/${m[1]}` };
   if (/vt\.tiktok\.com|vm\.tiktok\.com/.test(u)) return { source: 'tiktok', id: null, embed: null };
   if ((m = u.match(/instagram\.com\/(?:reel|reels|p)\/([\w-]+)/)))
     return { source: 'instagram', id: m[1], embed: `https://www.instagram.com/reel/${m[1]}/embed` };
@@ -49,13 +49,25 @@ export async function saveLink(url: string, coachId?: string): Promise<FeedItem[
   let thumb: string | null = null;
 
   if (parsed.source === 'tiktok') {
+    // Short share links (vt./vm.tiktok.com) redirect to the full video URL.
+    if (!parsed.id) {
+      try {
+        const r = await fetch(finalUrl);
+        if (/\/video\/\d+/.test(r.url)) {
+          finalUrl = r.url.split('?')[0];
+          parsed = parseLink(finalUrl);
+        }
+      } catch {
+        // keep the short link
+      }
+    }
     try {
       const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(finalUrl)}`);
       const j = (await r.json()) as { title?: string; thumbnail_url?: string; html?: string };
       title = j.title ?? null;
       thumb = j.thumbnail_url ?? null;
       const id = j.html?.match(/data-video-id="(\d+)"/)?.[1];
-      if (id) parsed = { source: 'tiktok', id, embed: `https://www.tiktok.com/embed/v2/${id}` };
+      if (id) parsed = { source: 'tiktok', id, embed: `https://www.tiktok.com/player/v1/${id}` };
     } catch {
       // keep the bare link
     }

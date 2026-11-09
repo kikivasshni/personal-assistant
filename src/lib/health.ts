@@ -149,7 +149,20 @@ export async function snapshot(): Promise<HealthSnapshot | null> {
 // ---------- workouts you report ----------
 
 export async function logWorkout(title: string, minutes: number | null, details: string | null, at = Date.now()) {
-  await (await db()).runAsync(
+  const d = await db();
+  // The same workout told twice on the same day is one workout.
+  const dayStart = startOfDay(new Date(at));
+  const same = await d.getFirstAsync<{ id: number }>(
+    'SELECT id FROM workouts WHERE lower(title) = lower(?) AND created_at >= ? AND created_at < ?',
+    title,
+    dayStart,
+    dayStart + 86_400_000,
+  );
+  if (same) {
+    await d.runAsync('UPDATE workouts SET minutes = COALESCE(?, minutes), details = COALESCE(?, details) WHERE id = ?', minutes, details, same.id);
+    return;
+  }
+  await d.runAsync(
     'INSERT INTO workouts(title, minutes, details, source, created_at) VALUES(?, ?, ?, ?, ?)',
     title,
     minutes,
@@ -185,7 +198,9 @@ export async function logPeriodDay(day = dayKey(), on = true) {
 }
 
 export async function logSymptom(note: string, day = dayKey()) {
-  await (await db()).runAsync("INSERT INTO cycle_log(day, kind, note, created_at) VALUES(?, 'symptom', ?, ?)", day, note, Date.now());
+  const d = await db();
+  if (await d.getFirstAsync("SELECT 1 FROM cycle_log WHERE day = ? AND kind = 'symptom' AND lower(note) = lower(?)", day, note)) return;
+  await d.runAsync("INSERT INTO cycle_log(day, kind, note, created_at) VALUES(?, 'symptom', ?, ?)", day, note, Date.now());
 }
 
 export async function recentSymptoms(days = 35): Promise<{ day: string; note: string }[]> {

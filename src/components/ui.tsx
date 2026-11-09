@@ -1,4 +1,4 @@
-import { ReactNode, useContext } from 'react';
+import { ReactNode, useContext, useRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -201,7 +201,7 @@ export function Button({
   style,
 }: {
   title: string;
-  onPress: () => void;
+  onPress: () => void | Promise<unknown>;
   variant?: 'primary' | 'soft' | 'ghost' | 'danger';
   loading?: boolean;
   disabled?: boolean;
@@ -209,12 +209,22 @@ export function Button({
   style?: StyleProp<ViewStyle>;
 }) {
   const v = buttonVariants[variant];
+  // While an async onPress is still running, further taps are ignored, so a
+  // quick double tap can't save something twice.
+  const running = useRef(false);
   return (
     <Pressable
       disabled={disabled || loading}
       onPress={() => {
+        if (running.current) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        onPress();
+        const r = onPress();
+        if (r && typeof (r as Promise<unknown>).finally === 'function') {
+          running.current = true;
+          (r as Promise<unknown>).catch(() => {}).finally(() => {
+            running.current = false;
+          });
+        }
       }}
       style={({ pressed }) => [
         styles.button,

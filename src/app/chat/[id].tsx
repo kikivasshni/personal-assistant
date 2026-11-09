@@ -59,6 +59,7 @@ export default function Chat() {
   const [attachment, setAttachment] = useState<(Attachment & { uri: string }) | null>(null);
   const autoSent = useRef(false);
   const abort = useRef<AbortController | null>(null);
+  const sendingRef = useRef(false);
   const list = useRef<FlatList<Message>>(null);
 
   const load = useCallback(async () => {
@@ -68,7 +69,9 @@ export default function Chat() {
   const send = useCallback(
     async (raw: string) => {
       const body = raw.trim();
-      if ((!body && !attachment) || busy) return;
+      // The ref catches a quick double tap before `busy` has re-rendered.
+      if ((!body && !attachment) || busy || sendingRef.current) return;
+      sendingRef.current = true;
       setText('');
       setError(null);
       setBusy(true);
@@ -91,6 +94,7 @@ export default function Chat() {
       } catch (e) {
         if (!abort.current?.signal.aborted) setError(e instanceof Error ? e.message : String(e));
       } finally {
+        sendingRef.current = false;
         setBusy(false);
         setStream('');
         setStatus(null);

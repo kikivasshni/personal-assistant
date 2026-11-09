@@ -61,7 +61,39 @@ function onYouTubeIframeAPIReady(){
 </body></html>`;
 }
 
-// TikTok / Instagram embeds: best effort. Find their <video> and drive it.
+// TikTok's official embed player (player/v1), driven through its postMessage
+// API: autoplay, loop, no description or "more videos" clutter.
+export const tiktokId = (item: FeedItem) =>
+  item.source === 'tiktok' ? (item.embed_url?.match(/(?:embed\/v2|player\/v1)\/(\d+)/)?.[1] ?? item.url.match(/\/video\/(\d+)/)?.[1] ?? null) : null;
+
+function tiktokHtml(id: string, autoplay: boolean) {
+  const params = 'autoplay=' + (autoplay ? 1 : 0) + '&loop=1&controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0&closed_caption=0';
+  return `<!doctype html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{position:absolute;inset:0;width:100vw;height:100vh;border:0}</style>
+</head><body>
+<iframe id="p" src="https://www.tiktok.com/player/v1/${id}?${params}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
+<script>
+var f=document.getElementById('p');
+function post(m){ if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(m)); }
+function send(type,value){ f.contentWindow.postMessage({type:type,value:value,'x-tiktok-player':true},'*'); }
+window.cmd=function(c){
+  if(c==='play') send('play');
+  else if(c==='pause') send('pause');
+  else if(c==='restart'){ send('seekTo',0); send('play'); }
+  else if(c==='unmute'){ send('unMute'); post({t:'sound'}); }
+};
+window.addEventListener('message',function(e){
+  var d=e.data; if(!d || !d['x-tiktok-player']) return;
+  if(d.type==='onPlayerReady') post({t:'ready'});
+  if(d.type==='onStateChange' && d.value===1) post({t:'state',s:1});
+  if(d.type==='onCurrentTime' && d.value) post({t:'time',c:d.value.currentTime,d:d.value.duration});
+  if(d.type==='onError') post({t:'error'});
+});
+</script></body></html>`;
+}
+
+// Instagram embeds: best effort. Find their <video> and drive it.
 const EMBED_CMD = (c: 'play' | 'pause') => `(function(){
   var v=document.querySelector('video');
   if(v){ ${c === 'play' ? "v.loop=true; v.play().catch(function(){ v.muted=true; v.play(); });" : 'v.pause();'} }
@@ -89,24 +121,35 @@ export function ShortPlayer({ item, active, suspended, mounted, onLike }: Props)
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ytId = item.source === 'youtube' ? youtubeId(item) : null;
-  const embeddable = !!item.embed_url && !failed;
-  const cover = /\/shorts\//.test(item.url);
+  const ttId = tiktokId(item);
+  const driven = !!(ytId || ttId); // pages we build, controlled through window.cmd
+  const embeddable = (!!item.embed_url || !!ttId) && !failed;
+  // Fit the whole video on screen (letterboxed if needed) instead of
+  // zooming it to fill, which cut off captions at the edges.
+  const cover = false;
 
   // The page is built once per clip. Whether it starts playing is fixed at
   // load; after that play/pause go through window.cmd, so swiping never
   // reloads a player.
   const [startActive] = useState(active && !suspended);
   const source = useMemo<{ html: string; baseUrl: string } | { uri: string } | null>(
-    () => (ytId ? { html: youtubeHtml(ytId, startActive, cover), baseUrl: ORIGIN } : item.embed_url ? { uri: item.embed_url } : null),
-    [ytId, startActive, cover, item.embed_url],
+    () =>
+      ytId
+        ? { html: youtubeHtml(ytId, startActive, cover), baseUrl: ORIGIN }
+        : ttId
+          ? { html: tiktokHtml(ttId, startActive), baseUrl: 'https://www.tiktok.com' }
+          : item.embed_url
+            ? { uri: item.embed_url }
+            : null,
+    [ytId, ttId, startActive, cover, item.embed_url],
   );
 
   const send = useCallback(
     (c: 'play' | 'pause' | 'restart') => {
-      if (ytId) web.current?.injectJavaScript(`window.cmd && window.cmd('${c}'); true;`);
+      if (driven) web.current?.injectJavaScript(`window.cmd && window.cmd('${c}'); true;`);
       else if (item.embed_url) web.current?.injectJavaScript(EMBED_CMD(c === 'pause' ? 'pause' : 'play'));
     },
-    [ytId, item.embed_url],
+    [driven, item.embed_url],
   );
 
   // Swiping onto a clip starts it from the top; swiping away pauses it.
@@ -197,7 +240,7 @@ export function ShortPlayer({ item, active, suspended, mounted, onLike }: Props)
           style={styles.web}
           onMessage={onMessage}
           onLoadEnd={() => {
-            if (!ytId && active && !suspended) setTimeout(() => web.current?.injectJavaScript(EMBED_CMD('play')), 800);
+            if (!driven && active && !suspended) setTimeout(() => web.current?.injectJavaScript(EMBED_CMD('play')), 800);
             if (!ytId) setStarted(true);
           }}
           allowsInlineMediaPlayback
@@ -257,7 +300,7 @@ export function ShortPlayer({ item, active, suspended, mounted, onLike }: Props)
         <Ionicons name="heart" size={110} color="#FF4D79" />
       </Animated.View>
 
-      {ytId && embeddable && (
+      {driven && embeddable && (
         <View pointerEvents="none" style={styles.track}>
           <View style={[styles.bar, { width: `${progress * 100}%` }]} />
         </View>
